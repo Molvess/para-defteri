@@ -1122,7 +1122,7 @@ fun AvatarRender(
                 val imageModel = remember(avatarUri, context) {
                     ImageRequest.Builder(context)
                         .data(if (avatarUri.startsWith("/")) java.io.File(avatarUri) else avatarUri)
-                        .crossfade(true)
+                        .crossfade(false)
                         .build()
                 }
                 AsyncImage(
@@ -2263,9 +2263,9 @@ fun KeepImportDialog(
 ) {
     var rawText by remember { mutableStateOf("") }
     
-    val sampleText = """Mustafa - 110 ₺ - Sigara 06/03/2026 + ✅
-Hakan - 250 ₺ - Yemek Gideri 07/03/2026 - ❌
-Leyla Abla - 50 ₺ - Borç + ✅"""
+    val sampleText = """Mustafa - 200 TL - yemeks 05/07/2026 +
+Rifat - 1150 TL - Telefon 09/03/2026 -
+Yasin - 40 TL - içecek 20/07/2026 +"""
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -2289,7 +2289,7 @@ Leyla Abla - 50 ₺ - Borç + ✅"""
                 )
 
                 Text(
-                    text = "Keep'te tuttuğun formatı aşağıya yapıştır. Sistem otomatik algılayıp borçları ekleyecektir.",
+                    text = "Her satır: Ad - BorçMiktarı TL - Açıklama Tarih +/-. '+' Alacak, '-' Verecek anlamına gelir. Aktarılan kayıtlar Ödenecek durumunda eklenir.",
                     fontSize = 12.sp,
                     color = TextSecondary
                 )
@@ -2359,7 +2359,7 @@ Leyla Abla - 50 ₺ - Borç + ✅"""
                         ),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("AKTARIYI YAP", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("AKTARIMI YAP", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }

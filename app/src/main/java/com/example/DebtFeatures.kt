@@ -9,6 +9,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
@@ -38,6 +40,13 @@ import java.util.*
 
 private enum class DirectionFilter { ALL, RECEIVABLE, PAYABLE }
 private enum class PaymentFilter { ALL, PENDING, PAID }
+
+private data class PersonPendingSummary(
+    val key: String,
+    val name: String,
+    val receivable: Double,
+    val payable: Double
+)
 
 @Composable
 fun DebtLedgerV2(
@@ -56,6 +65,7 @@ fun DebtLedgerV2(
 ) {
     var direction by remember { mutableStateOf(DirectionFilter.ALL) }
     var payment by remember { mutableStateOf(PaymentFilter.ALL) }
+    val listState = rememberLazyListState()
     val personMap = remember(people) { people.associateBy { it.person.personKey } }
     val filtered = remember(debts, direction, payment) {
         debts.asSequence()
@@ -79,11 +89,26 @@ fun DebtLedgerV2(
     val pendingReceivable = filtered.filter { it.isIncome && !it.isPaid }.sumOf { it.amount }
     val pendingPayable = filtered.filter { !it.isIncome && !it.isPaid }.sumOf { it.amount }
     val paidTotal = filtered.filter { it.isPaid }.sumOf { it.amount }
-    val grouped = filtered.groupBy { it.personKey ?: normalizePersonKey(it.name) }
+    val personSummaries = remember(filtered) {
+        filtered
+            .asSequence()
+            .filterNot(DebtRecord::isPaid)
+            .groupBy { it.personKey ?: normalizePersonKey(it.name) }
+            .map { (key, records) ->
+                PersonPendingSummary(
+                    key = key,
+                    name = records.first().name,
+                    receivable = records.filter(DebtRecord::isIncome).sumOf(DebtRecord::amount),
+                    payable = records.filterNot(DebtRecord::isIncome).sumOf(DebtRecord::amount)
+                )
+            }
+            .sortedBy { it.name.lowercase(Locale.forLanguageTag("tr-TR")) }
+    }
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            state = listState,
             contentPadding = PaddingValues(top = 12.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
@@ -132,25 +157,16 @@ fun DebtLedgerV2(
                 )
             }
 
-            if (grouped.isNotEmpty()) {
+            if (personSummaries.isNotEmpty()) {
                 item {
-                    Text("KİŞİ BAZINDA GÖRÜNEN TOPLAMLAR", fontSize = 11.sp, fontWeight = FontWeight.Black, color = TextSecondary)
-                    Spacer(Modifier.height(6.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        grouped.values.sortedBy { it.first().name.lowercase(Locale("tr", "TR")) }.forEach { records ->
-                            val pendingA = records.filter { it.isIncome && !it.isPaid }.sumOf { it.amount }
-                            val pendingV = records.filter { !it.isIncome && !it.isPaid }.sumOf { it.amount }
-                            val paidA = records.filter { it.isIncome && it.isPaid }.sumOf { it.amount }
-                            val paidV = records.filter { !it.isIncome && it.isPaid }.sumOf { it.amount }
-                            Surface(color = DarkSurfaceElevated, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, CardBorder)) {
-                                Column(Modifier.fillMaxWidth().padding(10.dp)) {
-                                    Text(records.first().name, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                    Text("Bekleyen: Alacak ${formatCurrency(pendingA, true)} • Verecek ${formatCurrency(pendingV, true)}", fontSize = 11.sp, color = TextSecondary)
-                                    Text("Ödenen: Alacak ${formatCurrency(paidA, true)} • Verecek ${formatCurrency(paidV, true)}", fontSize = 11.sp, color = TextSecondary)
-                                }
-                            }
-                        }
-                    }
+                    Text("KİŞİ BAZINDA BEKLEYENLER", fontSize = 11.sp, fontWeight = FontWeight.Black, color = TextSecondary)
+                }
+                items(
+                    items = personSummaries,
+                    key = { "person-${it.key}" },
+                    contentType = { "person_summary" }
+                ) { summary ->
+                    PersonPendingCard(summary)
                 }
             }
 
@@ -176,7 +192,11 @@ fun DebtLedgerV2(
                     }
                 }
             } else {
-                items(filtered, key = { it.id }) { debt ->
+                items(
+                    items = filtered,
+                    key = { "debt-${it.id}" },
+                    contentType = { "debt" }
+                ) { debt ->
                     val person = personMap[debt.personKey ?: normalizePersonKey(debt.name)]
                     DebtFeatureCard(debt, person?.ibans.orEmpty(), onTogglePaid, onDelete, onEdit, onAvatar, onManageIban, onCopyIban)
                 }
@@ -193,6 +213,42 @@ fun DebtLedgerV2(
             Spacer(Modifier.width(8.dp))
             Text("BORÇ EKLE", fontWeight = FontWeight.Black)
         }
+    }
+}
+
+@Composable
+private fun PersonPendingCard(summary: PersonPendingSummary) {
+    Surface(
+        color = DarkSurfaceElevated,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, CardBorder)
+    ) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
+            Text(summary.name, fontWeight = FontWeight.ExtraBold, color = TextPrimary, fontSize = 14.sp)
+            Spacer(Modifier.height(5.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                PendingPersonAmount(
+                    label = "BEKLEYEN ALACAK",
+                    amount = summary.receivable,
+                    color = EmeraldPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                PendingPersonAmount(
+                    label = "BEKLEYEN VERECEK",
+                    amount = summary.payable,
+                    color = ExpenseRed,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PendingPersonAmount(label: String, amount: Double, color: Color, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        Text(label, fontSize = 9.sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, color = color)
+        Text(formatCurrency(amount, true), fontSize = 14.sp, fontWeight = FontWeight.Black, fontStyle = FontStyle.Italic, color = color)
     }
 }
 
@@ -233,6 +289,9 @@ private fun DebtFeatureCard(
     onCopyIban: (PersonIban) -> Unit
 ) {
     val directionColor = if (debt.isIncome) EmeraldPrimary else ExpenseRed
+    val formattedAmount = remember(debt.amount, debt.isIncome) {
+        (if (debt.isIncome) "+ " else "- ") + formatCurrency(debt.amount, true)
+    }
     Card(
         modifier = Modifier.fillMaxWidth().border(1.dp, CardBorder, RoundedCornerShape(16.dp)),
         colors = CardDefaults.cardColors(containerColor = DarkSurface.copy(alpha = if (debt.isPaid) .7f else 1f)),
@@ -248,7 +307,7 @@ private fun DebtFeatureCard(
                     Text("${if (debt.isIncome) "Alacak" else "Verecek"} • ${if (debt.isPaid) "Ödendi" else "Ödenecek"} • ${debt.dateStr}", fontSize = 10.sp, color = TextSecondary)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text((if (debt.isIncome) "+ " else "- ") + formatCurrency(debt.amount, true), fontWeight = FontWeight.Black, color = directionColor)
+                    Text(formattedAmount, fontWeight = FontWeight.Black, color = directionColor)
                     IconButton(onClick = { onEdit(debt) }, modifier = Modifier.size(34.dp)) {
                         Icon(Icons.Default.Edit, contentDescription = "Borcu düzenle", tint = TextSecondary, modifier = Modifier.size(18.dp))
                     }

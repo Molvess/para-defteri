@@ -1,5 +1,6 @@
 package com.example.data
 
+import java.text.SimpleDateFormat
 import java.util.Locale
 
 private val turkishLocale = Locale("tr", "TR")
@@ -36,6 +37,47 @@ fun maskIban(value: String): String {
     val iban = normalizeIban(value)
     if (iban.length < 8) return "••••"
     return "${iban.take(4)} •••• •••• ${iban.takeLast(4)}"
+}
+
+/**
+ * Google Keep satır biçimi:
+ * Ad - Tutar TL - Açıklama Tarih +/-
+ */
+fun parseKeepDebtLine(line: String): DebtRecord? {
+    val match = Regex(
+        """^\s*(.+?)\s+-\s+([0-9][0-9.,]*)\s*(?:TL|₺)?\s+-\s+(.*?)\s+(?:-\s*)?(\d{2}/\d{2}/\d{4})\s*([+-])(?:\s*(✅|❌|Ödendi|Ödenecek))?\s*$""",
+        RegexOption.IGNORE_CASE
+    ).matchEntire(line) ?: return null
+
+    val name = match.groupValues[1].trim()
+    val amount = parseKeepAmount(match.groupValues[2]) ?: return null
+    val description = match.groupValues[3].trim().ifEmpty { "Keep Aktarımı" }
+    val date = match.groupValues[4]
+    val direction = match.groupValues[5]
+    val status = match.groupValues[6]
+    val validDate = runCatching {
+        SimpleDateFormat("dd/MM/yyyy", turkishLocale).apply { isLenient = false }.parse(date)
+    }.getOrNull() != null
+
+    if (name.isEmpty() || amount <= 0.0 || !validDate) return null
+    return DebtRecord(
+        name = capitalizeFirstTurkish(name),
+        amount = amount,
+        description = description,
+        dateStr = date,
+        isIncome = direction == "+",
+        isPaid = status.equals("Ödendi", ignoreCase = true) || status == "✅"
+    )
+}
+
+private fun parseKeepAmount(raw: String): Double? {
+    val normalized = when {
+        ',' in raw && '.' in raw -> raw.replace(".", "").replace(',', '.')
+        ',' in raw -> raw.replace(',', '.')
+        raw.count { it == '.' } == 1 && raw.substringAfter('.').length <= 2 -> raw
+        else -> raw.replace(".", "")
+    }
+    return normalized.toDoubleOrNull()
 }
 
 private fun csvCell(value: String): String = "\"${value.replace("\"", "\"\"")}\""

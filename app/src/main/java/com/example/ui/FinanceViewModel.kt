@@ -11,6 +11,7 @@ import com.example.data.FinanceRepository
 import com.example.data.PersonIban
 import com.example.data.PersonWithIbans
 import com.example.data.normalizePersonKey
+import com.example.data.parseKeepDebtLine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -225,112 +226,34 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     // --- Google Keep "Alacaklar - Verecekler" Parser ---
     fun importFromKeep(rawText: String): Int {
-        var importCount = 0
         if (rawText.isBlank()) return 0
+        val records = rawText.lineSequence()
+            .map(String::trim)
+            .filter { line ->
+                line.isNotEmpty() &&
+                    !line.equals("Alacaklar - Verecekler", ignoreCase = true) &&
+                    !line.equals("Alacaklar-Verecekler", ignoreCase = true)
+            }
+            .mapNotNull(::parseKeepDebtLine)
+            .toList()
+        if (records.isEmpty()) return 0
 
-        val lines = rawText.lines()
         viewModelScope.launch {
-            for (line in lines) {
-                val cleanedLine = line.trim()
-                if (cleanedLine.isEmpty() || cleanedLine.equals("Alacaklar - Verecekler", ignoreCase = true) || cleanedLine.equals("Alacaklar-Verecekler", ignoreCase = true)) {
-                    continue
-                }
-
-                val record = parseKeepLine(cleanedLine)
-                if (record != null) {
-                    val trimmedName = record.name.trim()
-                    val lowercaseName = trimmedName.lowercase(Locale("tr", "TR"))
-                    val resolvedAvatarUri = debts.value.firstOrNull { 
-                        it.name.trim().lowercase(Locale("tr", "TR")) == lowercaseName && !it.avatarUri.isNullOrEmpty() 
-                    }?.avatarUri
-                    
-                    val updatedRecord = if (resolvedAvatarUri != null) {
-                        record.copy(avatarUri = resolvedAvatarUri, personKey = normalizePersonKey(trimmedName))
-                    } else {
-                        record.copy(personKey = normalizePersonKey(trimmedName))
-                    }
-                    repository.ensurePerson(updatedRecord.personKey!!, trimmedName)
-                    repository.insertDebt(updatedRecord)
-                    importCount++
-                }
+            records.forEach { record ->
+                val trimmedName = record.name.trim()
+                val lowercaseName = trimmedName.lowercase(Locale("tr", "TR"))
+                val resolvedAvatarUri = debts.value.firstOrNull {
+                    it.name.trim().lowercase(Locale("tr", "TR")) == lowercaseName && !it.avatarUri.isNullOrEmpty()
+                }?.avatarUri
+                val updatedRecord = record.copy(
+                    avatarUri = resolvedAvatarUri,
+                    personKey = normalizePersonKey(trimmedName)
+                )
+                repository.ensurePerson(updatedRecord.personKey!!, trimmedName)
+                repository.insertDebt(updatedRecord)
             }
         }
-        return importCount
-    }
-
-    private fun parseKeepLine(line: String): DebtRecord? {
-        // format: Name - Amount TL - Description Date +/- State
-        // e.g.: "Mustafa - 110 TL - Sigara 06/03/2026 + ✅"
-        // e.g.: "Ahmet - 200 TL - Yemek - ❌"
-        // e.g.: "Ayşe - 1500 - Kira Ödemesi + ✅"
-        
-        val parts = line.split("-").map { it.trim() }
-        if (parts.size >= 2) {
-            val name = parts[0]
-            val amountPart = parts[1]
-            
-            // Extract numeric amount from the amount part
-            val amountRegex = """([0-9]+([.,][0-9]+)?)""".toRegex()
-            val amountMatch = amountRegex.find(amountPart)
-            val amount = amountMatch?.value?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
-
-            if (amount <= 0.0) return null // Skip lines that don't have a valid amount
-
-            // Parse description, date, and +/- from details part or rest of line
-            var description = "Keep Aktarımı"
-            var dateStr = getCurrentFormattedDate()
-            var isIncome = true // Default is (+) Alacak
-            var isPaid = false  // Default is pending
-
-            if (parts.size >= 3) {
-                val detailsPart = parts.subList(2, parts.size).joinToString(" - ")
-                
-                // Inspect details
-                isIncome = detailsPart.contains("+") || detailsPart.contains("Alacak", ignoreCase = true) || detailsPart.contains("Gelir", ignoreCase = true)
-                // If it contains minus or Verecek or Borç, make it Expense
-                if (detailsPart.contains("-") || detailsPart.contains("Verecek", ignoreCase = true) || detailsPart.contains("Borç", ignoreCase = true) || detailsPart.contains("Gider", ignoreCase = true)) {
-                    isIncome = false
-                }
-
-                isPaid = detailsPart.contains("✅") || detailsPart.contains("ok", ignoreCase = true) || detailsPart.contains("Ödendi", ignoreCase = true)
-
-                // Remove emojis and indicator marks to clean description and extract date
-                var cleanDetails = detailsPart
-                    .replace("✅", "")
-                    .replace("❌", "")
-                    .replace("+", "")
-                    .replace("-", "")
-                    .replace("Ödendi", "", ignoreCase = true)
-                    .replace("Ödenmedi", "", ignoreCase = true)
-                    .trim()
-
-                // Find date using regex
-                val dateRegex = """\d{2}/\d{2}/\d{4}""".toRegex()
-                val dateMatch = dateRegex.find(cleanDetails)
-                if (dateMatch != null) {
-                    dateStr = dateMatch.value
-                    cleanDetails = cleanDetails.replace(dateMatch.value, "").trim()
-                }
-
-                if (cleanDetails.isNotEmpty()) {
-                    description = cleanDetails
-                }
-            } else {
-                // If we only have 2 parts: "Name - 110 TL + ✅"
-                isIncome = amountPart.contains("+")
-                isPaid = amountPart.contains("✅")
-            }
-
-            return DebtRecord(
-                name = name,
-                amount = amount,
-                description = description,
-                dateStr = dateStr,
-                isIncome = isIncome,
-                isPaid = isPaid
-            )
-        }
-        return null
+        return records.size
     }
 
     fun getCurrentFormattedDate(): String {
