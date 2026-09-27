@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'ledger.dart';
 import 'store.dart';
 import 'dialogs.dart';
+import 'person_avatar.dart';
 
 const green = Color(0xff84b59a),
     red = Color(0xffd89999),
@@ -46,6 +47,16 @@ class LedgerApp extends StatelessWidget {
         border: OutlineInputBorder(),
         filled: true,
         fillColor: Color(0xff111a23),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          side: const BorderSide(color: Color(0xff506174)),
+          backgroundColor: const Color(0xff202c38),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        ),
       ),
     ),
     home: const Startup(),
@@ -102,6 +113,8 @@ void notice(BuildContext context, String text) {
 
 String errorText(Object e) => e is FormatException
     ? e.message
+    : e is PlatformException && e.message != null
+    ? e.message!
     : 'İşlem tamamlanamadı. Kaydı/dosyayı kontrol edip tekrar deneyin.';
 
 class LedgerHome extends StatefulWidget {
@@ -253,25 +266,108 @@ class _LedgerHomeState extends State<LedgerHome> {
     }
   }
 
-  Future<void> displayInfo() => action(() async {
-    final info = await platform.invokeMapMethod<String, dynamic>('display');
-    if (!mounted || info == null) return;
-    await showDialog<void>(
+  Future<void> showTools() async {
+    final choice = await showModalBottomSheet<String>(
       context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Ekran yenileme hızı'),
-        content: Text(
-          'Android’in bildirdiği hız: ${info['activeHz']} Hz\nUygulamanın tercih ettiği hız: ${info['preferredHz']} Hz\nDesteklenen hızlar: ${(info['supportedHz'] as List?)?.join(', ')} Hz\n\nBu değer ekran modudur, ölçülmüş uygulama FPS’i değildir. Pil tasarrufu ve telefonun uygulamaya özel ekran ayarı hızı sınırlayabilir.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c),
-            child: const Text('Kapat'),
+      showDragHandle: true,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xff171e26),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (c) => SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Defter araçları',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Kayıtlarını taşı, yedekle ve güvende tut.',
+                  style: TextStyle(color: Colors.white60),
+                ),
+                const SizedBox(height: 20),
+                for (final item in const [
+                  (
+                    'keep',
+                    Icons.note_alt_outlined,
+                    'Google Keep listesini yapıştır',
+                    'Notlarından yeni borçlar ekle',
+                  ),
+                  (
+                    'open',
+                    Icons.file_open_outlined,
+                    'CSV / JSON içe aktar',
+                    'Mevcut kayıtların korunarak birleştirilir',
+                  ),
+                  (
+                    'json',
+                    Icons.backup_outlined,
+                    'JSON yedek kaydet',
+                    'Kişiler, fotoğraflar, IBAN ve tüm borçlar',
+                  ),
+                  (
+                    'csv',
+                    Icons.table_chart_outlined,
+                    'CSV dışa aktar',
+                    'Borçlarını tablo olarak kaydet',
+                  ),
+                ])
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Material(
+                      color: const Color(0xff202c38),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: const BorderSide(color: Color(0xff354555)),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        leading: Icon(item.$2, color: green),
+                        title: Text(
+                          item.$3,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        subtitle: Text(
+                          item.$4,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.white60,
+                          ),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: () => Navigator.pop(c, item.$1),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
-  });
+    if (!mounted) return;
+    switch (choice) {
+      case 'keep':
+        await keepImport();
+      case 'open':
+        await importFile();
+      case 'json':
+        await export(true);
+      case 'csv':
+        await export(false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -331,39 +427,10 @@ class _LedgerHomeState extends State<LedgerHome> {
               onPressed: busy ? null : () => people(),
               icon: const Icon(Icons.people_outline),
             ),
-            PopupMenuButton<String>(
-              enabled: !busy,
+            IconButton(
               tooltip: 'Yedekleme ve aktarım',
-              onSelected: (v) {
-                switch (v) {
-                  case 'keep':
-                    keepImport();
-                  case 'open':
-                    importFile();
-                  case 'json':
-                    export(true);
-                  case 'csv':
-                    export(false);
-                  case 'display':
-                    displayInfo();
-                }
-              },
-              itemBuilder: (_) => const [
-                PopupMenuItem(
-                  value: 'keep',
-                  child: Text('Google Keep listesini yapıştır'),
-                ),
-                PopupMenuItem(
-                  value: 'open',
-                  child: Text('CSV / JSON içe aktar'),
-                ),
-                PopupMenuItem(value: 'json', child: Text('JSON yedek kaydet')),
-                PopupMenuItem(value: 'csv', child: Text('CSV dışa aktar')),
-                PopupMenuItem(
-                  value: 'display',
-                  child: Text('Ekran yenileme hızı'),
-                ),
-              ],
+              onPressed: busy ? null : showTools,
+              icon: const Icon(Icons.more_vert),
             ),
           ],
         ),
@@ -503,11 +570,23 @@ class _LedgerHomeState extends State<LedgerHome> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            t.name,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                            ),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  t.name,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              PersonAvatar(
+                                                person: store.people[t.key],
+                                                name: t.name,
+                                                size: 52,
+                                              ),
+                                            ],
                                           ),
                                           const SizedBox(height: 8),
                                           Wrap(
@@ -695,14 +774,7 @@ class DebtCard extends StatelessWidget {
               children: [
                 InkWell(
                   onTap: manage,
-                  child: CircleAvatar(
-                    backgroundColor: const Color(0xff2b3845),
-                    child: Text(
-                      person?.avatar.isNotEmpty == true
-                          ? person!.avatar
-                          : debt.name.characters.first,
-                    ),
-                  ),
+                  child: PersonAvatar(person: person, name: debt.name),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -768,10 +840,10 @@ class DebtCard extends StatelessWidget {
               ),
             const Divider(height: 24),
             Wrap(
-              spacing: 4,
-              runSpacing: 4,
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                TextButton.icon(
+                OutlinedButton.icon(
                   onPressed: busy ? null : toggle,
                   icon: Icon(
                     debt.paid ? Icons.undo : Icons.check_circle_outline,
@@ -779,7 +851,7 @@ class DebtCard extends StatelessWidget {
                   ),
                   label: Text(debt.paid ? 'Ödenecek yap' : 'Ödendi yap'),
                 ),
-                TextButton.icon(
+                OutlinedButton.icon(
                   onPressed: busy
                       ? null
                       : (person?.accounts.isNotEmpty == true ? copy : manage),
@@ -790,7 +862,7 @@ class DebtCard extends StatelessWidget {
                         : 'IBAN ekle',
                   ),
                 ),
-                TextButton(
+                OutlinedButton(
                   onPressed: busy ? null : manage,
                   child: const Text('Kişi / IBAN'),
                 ),

@@ -8,7 +8,7 @@ Bu klasör mevcut Kotlin/Compose uygulamasından bağımsızdır. Android uygula
 2. Flutter uygulamasında sağ üst menü → **CSV / JSON içe aktar** ile dosyayı seçin.
 3. Okunan kayıt sayısını kontrol edip aktarımı onaylayın.
 
-Eski CSV'deki kişiler, borçlar, tutarlar, tarihler, yönler, ödeme durumları, oluşturulma zamanları ve çoklu IBAN'lar taşınır. CSV fotoğraf içermediğinden profil fotoğrafları taşınmaz; Flutter sürümünde kişi simgesi seçilebilir. Eski uygulamanın veritabanı değiştirilmez. Aynı adlı kişiler Türkçe büyük/küçük harf ve boşluk normalizasyonuyla eşleştirilir.
+Eski CSV'deki kişiler, borçlar, tutarlar, tarihler, yönler, ödeme durumları, oluşturulma zamanları ve çoklu IBAN'lar taşınır. CSV fotoğraf içermediğinden profil fotoğrafları taşınmaz; Flutter sürümünde kişi yönetiminden galerideki fotoğraf seçilebilir. Eski uygulamanın veritabanı değiştirilmez. Aynı adlı kişiler Türkçe büyük/küçük harf ve boşluk normalizasyonuyla eşleştirilir.
 
 Flutter sürümünün **JSON yedek kaydet** menüsü borçları ve borcu bulunmayan kişiler dahil tüm kişi/IBAN kayıtlarını içerir. İçe aktarma mevcut veriyi silmez; aynı kimlikli kayıtları atlar ve eksik IBAN'ları birleştirir. Geçersiz satırlar varsa hiçbir kayıt yazılmaz. Eski CSV'yi tekrar içe aktarırken aynı içerik ve oluşturulma zamanına sahip kayıtlar atlanır. Keep yapıştırma ise yeni kayıt ekleme işlemidir.
 
@@ -31,7 +31,17 @@ Bu ortamda `flutter analyze` komutu Türkçe klasör adını LSP'ye aktarırken 
 
 Kişi ve borç kartları `SliverList.builder` ile yalnızca görünür bölgede oluşturulur. Tek doğal kaydırma alanı, sınırlı genişlik, gölgesiz kartlar kullanılır. Kaydırma konumunu izleyen `setState`, her karede toplam hesabı veya özel kaydırma fiziği yoktur. Toplamlar veri/filtre değişimlerinde hesaplanır; SQLite işlemleri asenkrondur. Dosya okuma/yazma Android tarafında arka plan iş parçacığındadır.
 
-Android penceresi desteklenen aynı çözünürlükteki en yüksek yenileme hızını tercih eder; sistem/pil politikası bunu sınırlayabilir. **Ekran yenileme hızı** menüsü Android'in bildirdiği aktif ve tercih edilen hızı gösterir; uygulamanın gerçek FPS ölçümü değildir. Bağlı fiziksel cihaz olmadığı için 120 Hz cihazda kare zamanları doğrulanmadı.
+Android penceresi desteklenen aynı çözünürlükteki en yüksek yenileme hızını tercih eder; sistem/pil politikası bunu sınırlayabilir. Yenileme hızı menü seçeneği kaldırıldı; yüksek hız tercihi korunuyor. Bağlı fiziksel cihaz olmadığı için 120 Hz cihazda kare zamanları doğrulanmadı.
+
+## 1.1.0 — fotoğraflar ve arayüz
+
+Üç nokta menüsü ikonlu ve açıklamalı bir alt paneldir. Borç kartı işlemleri yuvarlatılmış dikdörtgen, kenarlıklı butonlardır; mevcut renkler korunur.
+
+Kişi / IBAN → **Fotoğraf ekle** ile Android dosya/galeri seçicisi açılır. Fotoğraf değiştirilebilir veya onayla kaldırılabilir. Seçim iptal edilirse mevcut fotoğraf korunur. Seçilen görselin yönü düzeltilir, ortadan kare kırpılır ve en fazla 256×256 JPEG olarak uygulamaya kopyalanır; orijinal galeri dosyası değişmez. Geniş depolama izni gerekmez. Fotoğraf kişi kartının sağında, borç kartında ve borç formunda adı eşleşen kişi için gösterilir.
+
+Fotoğraf kişi JSON alanında SQLite'a kaydedilir ve **JSON yedeğine dahildir**; CSV fotoğraf içermez. Eski fotoğrafsız kayıtlar ve eski emoji bilgisi korunur; veritabanı sıfırlanmaz. Yedek birleştirme mevcut fotoğrafı değiştirmez, yalnızca eksik fotoğrafı doldurur. Galeriden fotoğrafın silinmesi uygulamadaki kopyayı etkilemez. Güncellemeyi aynı Flutter uygulamasının üzerine kurun, kaldırıp yeniden kurmayın.
+
+Doğrulama: `dart analyze --fatal-infos` ve 9 Flutter testi. Fotoğrafın SQLite yeniden açılışında korunması, JSON yedeği, eski kayıt uyumluluğu, menü, seçici iptali/hatası ve formdaki kişi eşleşmesi test edilir. Widget testinde Android fotoğraf seçicisinin yanıtı taklit edilir; gerçek telefonun galeri uygulaması bu ortamda denenmemiştir.
 
 ## Kapsam
 

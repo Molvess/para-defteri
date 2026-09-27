@@ -150,22 +150,33 @@ class BankAccount {
 }
 
 class Person {
-  final String name, avatar;
+  final String name, avatar, photo;
   final List<BankAccount> accounts;
-  const Person(this.name, this.accounts, {this.avatar = ''});
+  const Person(this.name, this.accounts, {this.avatar = '', this.photo = ''});
+  Person withPhoto(String value) =>
+      Person(name, accounts, avatar: avatar, photo: value);
   String get key => personKey(name);
   Map<String, dynamic> toJson() => {
     'name': name,
     'accounts': accounts.map((a) => a.toJson()).toList(),
     'avatar': avatar,
+    'photo': photo,
   };
-  factory Person.fromJson(Map<String, dynamic> j) => Person(
-    j['name'] as String,
-    (j['accounts'] as List)
-        .map((a) => BankAccount.fromJson(Map<String, dynamic>.from(a)))
-        .toList(),
-    avatar: j['avatar'] as String? ?? '',
-  );
+  factory Person.fromJson(Map<String, dynamic> j) {
+    final photo = j['photo'] as String? ?? '';
+    if (photo.length > 350000) {
+      throw const FormatException('Profil fotoğrafı çok büyük.');
+    }
+    if (photo.isNotEmpty) base64Decode(photo);
+    return Person(
+      j['name'] as String,
+      (j['accounts'] as List)
+          .map((a) => BankAccount.fromJson(Map<String, dynamic>.from(a)))
+          .toList(),
+      avatar: j['avatar'] as String? ?? '',
+      photo: photo,
+    );
+  }
 }
 
 class ImportBatch {

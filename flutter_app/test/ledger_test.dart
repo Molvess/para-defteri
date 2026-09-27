@@ -8,6 +8,23 @@ import 'package:para_defteri_flutter/store.dart';
 import 'package:para_defteri_flutter/dialogs.dart';
 
 void main() {
+  const photo =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+  test('Old person payload remains readable; photo travels in JSON backup', () {
+    final old = Person.fromJson({
+      'name': 'Işık',
+      'accounts': [],
+      'avatar': '🌿',
+    });
+    expect(old.photo, isEmpty);
+    expect(old.avatar, '🌿');
+    final updated = old.withPhoto(photo);
+    expect(parseBackup(backupJson([], [updated])).people.single.photo, photo);
+    expect(
+      () => Person.fromJson({...old.toJson(), 'photo': 'invalid!'}),
+      throwsFormatException,
+    );
+  });
   test('Keep examples parse exact values and directions; invalid import is reported', () {
     final batch = parseKeep(
       'Mustafa - 200 TL - yemeks 05/07/2026 +\nRifat - 1150 TL - Telefon 09/03/2026 -\nYasin - 40 TL - içecek 20/07/2026 +',
@@ -85,7 +102,7 @@ void main() {
     await store.savePerson(
       const Person('Mustafa', [
         BankAccount('TR330006100519786457841326', 'Banka'),
-      ]),
+      ], photo: photo),
     );
     final backup = backupJson(store.debts, store.people.values.toList());
     await store.db.close();
@@ -94,8 +111,15 @@ void main() {
     expect(store.debts.single.paid, isTrue);
     expect(store.debts.single.createdAt, 123);
     expect(store.people.values.single.accounts, hasLength(1));
+    expect(store.people.values.single.photo, photo);
+    await store.importBatch(const ImportBatch([], [Person('Mustafa', [])]));
+    expect(store.people.values.single.photo, photo);
     expect(await store.importBatch(parseBackup(backup)), 0);
     expect(store.debts, hasLength(1));
+    await store.savePerson(store.people.values.single.withPhoto(''));
+    expect(store.people.values.single.photo, isEmpty);
+    await store.importBatch(parseBackup(backup));
+    expect(store.people.values.single.photo, photo);
     await expectLater(
       store.importBatch(parseKeep('bad row')),
       throwsFormatException,

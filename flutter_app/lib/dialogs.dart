@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'app.dart';
 import 'ledger.dart';
 import 'store.dart';
+import 'person_avatar.dart';
 
 class TurkishNameFormatter extends TextInputFormatter {
   @override
@@ -107,6 +108,31 @@ class _DebtEditorState extends State<DebtEditor> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                ListenableBuilder(
+                  listenable: Listenable.merge([name, widget.store]),
+                  builder: (context, _) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Row(
+                      children: [
+                        PersonAvatar(
+                          person: widget.store.people[personKey(name.text)],
+                          name: name.text,
+                          size: 64,
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Text(
+                            'Kişi fotoğrafı\nKayıtlı kişinin adını yazınca görünür.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white60,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 TextFormField(
                   controller: name,
                   enabled: !busy,
@@ -255,6 +281,57 @@ class _PeopleDialogState extends State<PeopleDialog> {
   bool busy = false;
   String? error;
   final revealed = <String>{};
+  Future<void> choosePhoto(Person p) async {
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      final photo = await platform.invokeMethod<String>('pickPhoto');
+      if (photo == null || !mounted) return;
+      final current = widget.store.people[p.key] ?? p;
+      await widget.store.savePerson(current.withPhoto(photo));
+      if (mounted) notice(context, 'Kişi fotoğrafı kaydedildi.');
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          error = errorText(e);
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          busy = false;
+        });
+      }
+    }
+  }
+
+  Future<void> removePhoto(Person p) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Kişi fotoğrafı kaldırılsın mı?'),
+        content: const Text('Galerideki asıl fotoğraf silinmez.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Kaldır'),
+          ),
+        ],
+      ),
+    );
+    if (yes == true && mounted) {
+      try {
+        await write((widget.store.people[p.key] ?? p).withPhoto(''));
+      } catch (_) {}
+    }
+  }
+
   Future<void> write(Person p) async {
     setState(() {
       busy = true;
@@ -335,6 +412,10 @@ class _PeopleDialogState extends State<PeopleDialog> {
                           : ListView.builder(
                               itemCount: people.length,
                               itemBuilder: (c, i) => ListTile(
+                                leading: PersonAvatar(
+                                  person: people[i],
+                                  name: people[i].name,
+                                ),
                                 title: Text(people[i].name),
                                 subtitle: Text(
                                   '${people[i].accounts.length} IBAN',
@@ -360,32 +441,39 @@ class _PeopleDialogState extends State<PeopleDialog> {
                               }),
                         child: const Text('Tüm kişiler'),
                       ),
-                    Wrap(
-                      spacing: 4,
+                    Row(
                       children: [
-                        for (final emoji in ['👤', '🌿', '☕', '⭐', '🐱', '🌙'])
-                          IconButton(
-                            tooltip: 'Profil simgesi $emoji',
-                            onPressed: busy
-                                ? null
-                                : () async {
-                                    try {
-                                      await write(
-                                        Person(
-                                          p.name,
-                                          p.accounts,
-                                          avatar: emoji,
-                                        ),
-                                      );
-                                    } catch (_) {}
-                                  },
-                            icon: Text(
-                              emoji,
-                              style: const TextStyle(fontSize: 24),
-                            ),
+                        PersonAvatar(person: p, name: p.name, size: 64),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: busy ? null : () => choosePhoto(p),
+                                icon: const Icon(
+                                  Icons.add_photo_alternate_outlined,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  p.photo.isEmpty
+                                      ? 'Fotoğraf ekle'
+                                      : 'Fotoğrafı değiştir',
+                                ),
+                              ),
+                              if (p.photo.isNotEmpty)
+                                OutlinedButton(
+                                  onPressed: busy ? null : () => removePhoto(p),
+                                  child: const Text('Fotoğrafı kaldır'),
+                                ),
+                            ],
                           ),
+                        ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    if (busy) const LinearProgressIndicator(),
                     if (error != null)
                       Text(error!, style: const TextStyle(color: red)),
                     Expanded(
@@ -506,6 +594,7 @@ class _PeopleDialogState extends State<PeopleDialog> {
                                                                   )
                                                                   .toList(),
                                                               avatar: p.avatar,
+                                                              photo: p.photo,
                                                             ),
                                                           );
                                                         } catch (_) {}
@@ -631,7 +720,9 @@ class _IbanEditorState extends State<IbanEditor> {
         throw const FormatException('Bu IBAN zaten kayıtlı.');
       }
       accounts.add(BankAccount(value, label.text.trim()));
-      await widget.store.savePerson(Person(p.name, accounts, avatar: p.avatar));
+      await widget.store.savePerson(
+        Person(p.name, accounts, avatar: p.avatar, photo: p.photo),
+      );
       if (mounted) {
         notice(context, 'IBAN kaydedildi.');
         Navigator.pop(context);

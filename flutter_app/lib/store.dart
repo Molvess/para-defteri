@@ -145,6 +145,7 @@ class LedgerStore extends ChangeNotifier {
           old.name,
           accounts.values.toList(),
           avatar: old.avatar.isEmpty ? p.avatar : old.avatar,
+          photo: old.photo.isEmpty ? p.photo : old.photo,
         );
         await tx.insert('people', {
           'id': p.key,
