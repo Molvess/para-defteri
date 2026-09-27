@@ -1,0 +1,120 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Subtle Drop Shadow under the book to create beautiful depth -->
+    <path
+        android:fillColor="#3D000000"
+        android:pathData="M 18,78 C 18,78 30,83 54,83 C 78,83 90,78 90,78 L 90,81 C 90,81 78,86 54,86 C 30,86 18,81 18,81 Z" />
+
+    <!-- Open Book Teal Cover Base / Binder -->
+    <path
+        android:fillColor="#0D9488"
+        android:pathData="M 16,30 
+                          C 16,30 36,26 54,32 
+                          C 72,26 92,30 92,30 
+                          L 92,76 
+                          C 92,76 72,72 54,78 
+                          C 36,72 16,76 16,76 Z" />
+
+    <!-- Darker Teal shading for binding thickness -->
+    <path
+        android:fillColor="#0F766E"
+        android:pathData="M 16,76 C 16,76 36,72 54,78 C 72,72 92,76 92,76 L 92,79 C 92,79 72,75 54,81 C 36,75 16,79 16,79 Z" />
+
+    <!-- Left Book Page (Soft Clean Off-White) -->
+    <path
+        android:fillColor="#F8FAFC"
+        android:pathData="M 19,32 
+                          C 19,32 36,28 52,34 
+                          L 52,74 
+                          C 36,68 19,72 19,72 Z" />
+
+    <!-- Right Book Page (Soft Clean Off-White) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 89,32 
+                          C 89,32 72,28 56,34 
+                          L 56,74 
+                          C 72,68 89,72 89,72 Z" />
+
+    <!-- Center Spine Shadow Split -->
+    <path
+        android:fillColor="#E2E8F0"
+        android:pathData="M 52,34 L 56,34 L 56,74 L 52,74 Z" />
+
+    <!-- LEFT PAGE TABLE GRID LINES (Point 13 - ledger columns) -->
+    <path
+        android:fillColor="#CBD5E1"
+        android:pathData="M 23,39 L 48,39 L 48,41 L 23,41 Z" />
+    <path
+        android:fillColor="#94A3B8"
+        android:pathData="M 23,45 L 35,45 L 35,46.5 L 23,46.5 Z" />
+    <path
+        android:fillColor="#CBD5E1"
+        android:pathData="M 38,45 L 48,45 L 48,46.5 L 38,46.5 Z" />
+        
+    <path
+        android:fillColor="#94A3B8"
+        android:pathData="M 23,50 L 32,50 L 32,51.5 L 23,51.5 Z" />
+    <path
+        android:fillColor="#CBD5E1"
+        android:pathData="M 35,50 L 48,50 L 48,51.5 L 35,51.5 Z" />
+
+    <path
+        android:fillColor="#94A3B8"
+        android:pathData="M 23,55 L 36,55 L 36,56.5 L 23,56.5 Z" />
+    <path
+        android:fillColor="#CBD5E1"
+        android:pathData="M 40,55 L 48,55 L 48,56.5 L 40,56.5 Z" />
+
+    <path
+        android:fillColor="#94A3B8"
+        android:pathData="M 23,60 L 30,60 L 30,61.5 L 23,61.5 Z" />
+    <path
+        android:fillColor="#CBD5E1"
+        android:pathData="M 34,60 L 48,60 L 48,61.5 L 34,61.5 Z" />
+
+    <path
+        android:fillColor="#94A3B8"
+        android:pathData="M 23,65 L 33,65 L 33,66.5 L 23,66.5 Z" />
+    <path
+        android:fillColor="#CBD5E1"
+        android:pathData="M 36,65 L 48,65 L 48,66.5 L 36,66.5 Z" />
+
+    <!-- Dollar sign or balance symbol at bottom left of ledger -->
+    <path
+        android:fillColor="#0D9488"
+        android:pathData="M 35,69.5 C 35,68.5 35.8,68 36.5,68 C 37.5,68 38,68.8 38,69.5 C 38,70.5 37.2,71 36,71 L 36,72 L 35,72 L 35,71 C 34.2,71 33.5,70.5 33.5,69.5 L 34.5,69.5 C 34.5,70 35,70.2 35.5,70.2 C 36,70.2 36.8,70 36.8,69.5 C 36.8,69.2 36.2,69 35.5,68.8 C 34.8,68.6 33.8,68.4 33.8,67.5 C 33.8,66.6 34.5,66 35.5,66 L 35.5,65 L 36.5,65 L 36.5,66 C 37.2,66 37.8,66.5 37.8,67.2 L 36.8,67.2 C 36.8,66.8 36.2,66.6 35.8,66.6 C 35.2,66.6 34.8,66.8 34.8,67.2 C 34.8,67.5 35.2,67.7 36,67.9 C 36.8,68.1 37.8,68.3 37.8,69.5 Z" />
+
+
+    <!-- RIGHT PAGE DESIGN: TURKISH LIRA (₺) & GREEN UPWARD SWEEPING ARROW -->
+    
+    <!-- Sweeping green-cyan Arrow in background of Lira symbol -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M 59,68 
+                          C 64,68 76,64 81,49
+                          L 76,46 
+                          L 86,43 
+                          L 87,53 
+                          L 83,50
+                          C 78,65 64,71 59,71 Z" />
+
+    <!-- Turkish Lira (₺) Symbol (Solid Teal Design) -->
+    <!-- Vertical stems and cross-bars -->
+    <path
+        android:fillColor="#0F766E"
+        android:pathData="M 64,39 L 68,39 L 68,64 C 68,67 66,69 62,69 L 61,69 L 61,66 L 63,66 C 65,66 65,65 65,64 L 65,58 L 59,58 L 59,55 L 65,55 L 65,49 L 59,49 L 59,46 L 65,46 L 65,39 Z" />
+
+    <!-- Diagonal bars crossing of the Lira symbol "₺" -->
+    <path
+        android:fillColor="#14B8A6"
+        android:pathData="M 60,42 L 73,48 L 72,50 L 60,44 Z" />
+    <path
+        android:fillColor="#14B8A6"
+        android:pathData="M 60,50 L 73,56 L 72,58 L 60,52 Z" />
+
+</vector>

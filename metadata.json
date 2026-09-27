@@ -1,0 +1,6 @@
+{
+  "name": "Para Defteri",
+  "description": "Borç takibi, abime bütçe yönetimi ve kolay veri aktarımını sağlayan pratik finans yardımcısı.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
