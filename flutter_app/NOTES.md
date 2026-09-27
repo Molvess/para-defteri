@@ -35,13 +35,19 @@ Android penceresi desteklenen aynı çözünürlükteki en yüksek yenileme hız
 
 ## 1.1.0 — fotoğraflar ve arayüz
 
+### 1.1.1 düzenlemeleri
+
+Bekleyenler kartında fotoğraf, tüm kartın sağında dikey ortalıdır. Kişi penceresi içerik kadar yer kaplar; IBAN eklendikçe büyür ve ekran sınırında kayar. Ödeme butonu yeşil, geri alma kehribar tonundadır. Borç kartında yalnızca ödeme, IBAN kopyalama ve silme eylemleri bulunur; IBAN yoksa kopyalama pasiftir. Kişi yönetimine kart fotoğrafından, bekleyenler kartından veya üstteki kişiler ikonundan ulaşılır.
+
+Fotoğraf seçimi Google Fotoğraflar'ın görsel seçme ekranını öncelikli açar. Yüklü/uygun değilse Android 13+ sistem fotoğraf seçicisi, eski cihazlarda galeri seçicisi kullanılır; fotoğraf için dosya seçici kullanılmaz. Cihaz/uygulama sürümüne göre bu ekranın görünümü değişebilir.
+
 Üç nokta menüsü ikonlu ve açıklamalı bir alt paneldir. Borç kartı işlemleri yuvarlatılmış dikdörtgen, kenarlıklı butonlardır; mevcut renkler korunur.
 
 Kişi / IBAN → **Fotoğraf ekle** ile Android dosya/galeri seçicisi açılır. Fotoğraf değiştirilebilir veya onayla kaldırılabilir. Seçim iptal edilirse mevcut fotoğraf korunur. Seçilen görselin yönü düzeltilir, ortadan kare kırpılır ve en fazla 256×256 JPEG olarak uygulamaya kopyalanır; orijinal galeri dosyası değişmez. Geniş depolama izni gerekmez. Fotoğraf kişi kartının sağında, borç kartında ve borç formunda adı eşleşen kişi için gösterilir.
 
 Fotoğraf kişi JSON alanında SQLite'a kaydedilir ve **JSON yedeğine dahildir**; CSV fotoğraf içermez. Eski fotoğrafsız kayıtlar ve eski emoji bilgisi korunur; veritabanı sıfırlanmaz. Yedek birleştirme mevcut fotoğrafı değiştirmez, yalnızca eksik fotoğrafı doldurur. Galeriden fotoğrafın silinmesi uygulamadaki kopyayı etkilemez. Güncellemeyi aynı Flutter uygulamasının üzerine kurun, kaldırıp yeniden kurmayın.
 
-Doğrulama: `dart analyze --fatal-infos` ve 9 Flutter testi. Fotoğrafın SQLite yeniden açılışında korunması, JSON yedeği, eski kayıt uyumluluğu, menü, seçici iptali/hatası ve formdaki kişi eşleşmesi test edilir. Widget testinde Android fotoğraf seçicisinin yanıtı taklit edilir; gerçek telefonun galeri uygulaması bu ortamda denenmemiştir.
+Doğrulama: `dart analyze --fatal-infos`, Android release lint ve 11 Flutter testi. Fotoğrafın SQLite yeniden açılışında korunması, JSON yedeği, eski kayıt uyumluluğu, menü, seçici iptali/hatası, formdaki kişi eşleşmesi, kart merkez hizası ve 0/1/çoklu IBAN pencere boyutları test edilir. Widget testinde Android fotoğraf seçicisinin yanıtı taklit edilir; gerçek telefonun Google Fotoğraflar/galeri uygulaması bu ortamda denenmemiştir.
 
 ## Kapsam
 

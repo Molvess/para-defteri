@@ -2,6 +2,8 @@ package com.molvess.para_defteri_flutter
 
 import android.app.Activity
 import android.content.Intent
+import android.content.ActivityNotFoundException
+import android.provider.MediaStore
 import android.os.Build
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -48,12 +50,7 @@ class MainActivity : FlutterActivity() {
                     when (call.method) {
                         "pickPhoto" -> {
                             pending = result
-                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                                addCategory(Intent.CATEGORY_OPENABLE)
-                                type = "image/*"
-                            }
-                            @Suppress("DEPRECATION")
-                            startActivityForResult(intent, 403)
+                            openPhotoPicker()
                         }
                         "save" -> {
                             exportText = call.argument<String>("text") ?: error("Eksik dosya içeriği")
@@ -84,6 +81,29 @@ class MainActivity : FlutterActivity() {
                     result.error("FILES", "Dosya seçici açılamadı.", null)
                 }
             }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun openPhotoPicker() {
+        val photos = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "image/*"
+            setPackage("com.google.android.apps.photos")
+        }
+        if (photos.resolveActivity(packageManager) != null) {
+            try {
+                startActivityForResult(photos, 403)
+                return
+            } catch (_: ActivityNotFoundException) { /* Try the system photo picker. */ }
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            try {
+                startActivityForResult(Intent(MediaStore.ACTION_PICK_IMAGES).apply { type = "image/*" }, 403)
+                return
+            } catch (_: ActivityNotFoundException) { /* Older gallery fallback below. */ }
+        }
+        startActivityForResult(Intent(Intent.ACTION_PICK).apply {
+            setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*")
+        }, 403)
     }
 
     @Deprecated("Platform activity result bridge")

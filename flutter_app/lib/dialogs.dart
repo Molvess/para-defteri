@@ -388,10 +388,11 @@ class _PeopleDialogState extends State<PeopleDialog> {
         ..sort((a, b) => a.key.compareTo(b.key));
       final p = widget.store.people[selected];
       return AlertDialog(
+        scrollable: true,
         title: Text(p?.name ?? 'Kişiler ve IBAN'),
         content: SizedBox(
           width: 500,
-          height: MediaQuery.sizeOf(context).height * .58,
+          height: p == null ? MediaQuery.sizeOf(context).height * .58 : null,
           child: p == null
               ? Column(
                   children: [
@@ -430,6 +431,7 @@ class _PeopleDialogState extends State<PeopleDialog> {
                   ],
                 )
               : Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (widget.selectedKey == null)
@@ -476,14 +478,15 @@ class _PeopleDialogState extends State<PeopleDialog> {
                     if (busy) const LinearProgressIndicator(),
                     if (error != null)
                       Text(error!, style: const TextStyle(color: red)),
-                    Expanded(
+                    SizedBox(
                       child: p.accounts.isEmpty
-                          ? const Center(
+                          ? const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
                               child: Text('Bu kişiye kayıtlı IBAN yok.'),
                             )
-                          : ListView.builder(
-                              itemCount: p.accounts.length,
-                              itemBuilder: (c, i) {
+                          : Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: List.generate(p.accounts.length, (i) {
                                 final account = p.accounts[i];
                                 return Card(
                                   margin: const EdgeInsets.only(bottom: 12),
@@ -611,7 +614,7 @@ class _PeopleDialogState extends State<PeopleDialog> {
                                     ),
                                   ),
                                 );
-                              },
+                              }),
                             ),
                     ),
                     FilledButton.icon(

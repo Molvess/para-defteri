@@ -21,6 +21,115 @@ void main() {
     home: child,
   );
 
+  testWidgets('Person dialog fits zero and one IBAN; many accounts scroll', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = (await tester.runAsync(database))!;
+    addTearDown(store.db.close);
+    await tester.runAsync(() => store.savePerson(const Person('Işık', [])));
+    await tester.pumpWidget(
+      shell(
+        Scaffold(
+          body: PeopleDialog(store: store, selectedKey: personKey('Işık')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final dialogSurface = find
+        .descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byWidgetPredicate(
+            (w) => w is Material && w.type == MaterialType.card,
+          ),
+        )
+        .first;
+    final emptyHeight = tester.getSize(dialogSurface).height;
+    expect(emptyHeight, lessThan(400));
+    const accounts = [
+      BankAccount('TR330006100519786457841326', 'Banka'),
+      BankAccount('DE89370400440532013000', 'İkinci banka'),
+      BankAccount('GB82WEST12345698765432', 'Üçüncü banka'),
+    ];
+    await tester.runAsync(
+      () => store.savePerson(Person('Işık', accounts.take(1).toList())),
+    );
+    await tester.pumpAndSettle();
+    final oneHeight = tester.getSize(dialogSurface).height;
+    expect(oneHeight, greaterThan(emptyHeight));
+    expect(oneHeight, lessThan(600));
+    await tester.runAsync(
+      () => store.savePerson(const Person('Işık', accounts)),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getSize(dialogSurface).height, lessThan(844));
+    await tester.drag(
+      find.byType(SingleChildScrollView).first,
+      const Offset(0, -400),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'Pending avatar is centered in whole card; debt actions are simplified',
+    (tester) async {
+      final store = (await tester.runAsync(database))!;
+      addTearDown(store.db.close);
+      const d = Debt(
+        id: 'center',
+        name: 'Işık',
+        cents: 20000,
+        description: '',
+        date: '05/07/2026',
+        income: true,
+        paid: false,
+        createdAt: 1,
+      );
+      await tester.runAsync(() => store.saveDebt(d));
+      await tester.pumpWidget(shell(LedgerHome(store: store)));
+      await tester.pumpAndSettle();
+      final group = find.byKey(ValueKey('person-${d.key}'));
+      final avatar = find.descendant(
+        of: group,
+        matching: find.byType(PersonAvatar),
+      );
+      final card = find.descendant(of: group, matching: find.byType(Card));
+      expect(
+        tester.getCenter(avatar).dy,
+        closeTo(tester.getCenter(card).dy, .1),
+      );
+      await tester.pumpWidget(
+        shell(
+          Scaffold(
+            body: DebtCard(
+              debt: d,
+              person: store.people[d.key],
+              busy: false,
+              edit: () {},
+              remove: () {},
+              toggle: () {},
+              manage: () {},
+              copy: () {},
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Kişi / IBAN'), findsNothing);
+      expect(find.text('IBAN ekle'), findsNothing);
+      final copyButton = find.widgetWithText(OutlinedButton, 'IBAN’ı kopyala');
+      expect(tester.widget<OutlinedButton>(copyButton).onPressed, isNull);
+      final payment = tester.widget<OutlinedButton>(
+        find.widgetWithText(OutlinedButton, 'Ödendi yap'),
+      );
+      expect(payment.style?.foregroundColor?.resolve({}), green);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('Tools menu uses a bottom sheet without refresh-rate item', (
     tester,
   ) async {

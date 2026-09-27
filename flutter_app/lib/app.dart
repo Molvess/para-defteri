@@ -566,44 +566,46 @@ class _LedgerHomeState extends State<LedgerHome> {
                                     onTap: () => people(t.key),
                                     child: Padding(
                                       padding: const EdgeInsets.all(14),
-                                      child: Column(
+                                      child: Row(
                                         crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                            CrossAxisAlignment.center,
                                         children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
                                                   t.name,
                                                   style: const TextStyle(
                                                     fontWeight: FontWeight.w800,
                                                   ),
                                                 ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              PersonAvatar(
-                                                person: store.people[t.key],
-                                                name: t.name,
-                                                size: 52,
-                                              ),
-                                            ],
+                                                const SizedBox(height: 8),
+                                                Wrap(
+                                                  spacing: 24,
+                                                  runSpacing: 8,
+                                                  children: [
+                                                    Metric(
+                                                      'Bekleyen alacak',
+                                                      t.income,
+                                                      green,
+                                                    ),
+                                                    Metric(
+                                                      'Bekleyen verecek',
+                                                      t.expense,
+                                                      red,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                          const SizedBox(height: 8),
-                                          Wrap(
-                                            spacing: 24,
-                                            runSpacing: 8,
-                                            children: [
-                                              Metric(
-                                                'Bekleyen alacak',
-                                                t.income,
-                                                green,
-                                              ),
-                                              Metric(
-                                                'Bekleyen verecek',
-                                                t.expense,
-                                                red,
-                                              ),
-                                            ],
+                                          const SizedBox(width: 12),
+                                          PersonAvatar(
+                                            person: store.people[t.key],
+                                            name: t.name,
+                                            size: 64,
                                           ),
                                         ],
                                       ),
@@ -845,6 +847,13 @@ class DebtCard extends StatelessWidget {
               children: [
                 OutlinedButton.icon(
                   onPressed: busy ? null : toggle,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: debt.paid ? amber : green,
+                    backgroundColor: debt.paid
+                        ? const Color(0xff352e23)
+                        : const Color(0xff203c31),
+                    side: BorderSide(color: debt.paid ? amber : green),
+                  ),
                   icon: Icon(
                     debt.paid ? Icons.undo : Icons.check_circle_outline,
                     size: 18,
@@ -854,17 +863,9 @@ class DebtCard extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: busy
                       ? null
-                      : (person?.accounts.isNotEmpty == true ? copy : manage),
+                      : (person?.accounts.isNotEmpty == true ? copy : null),
                   icon: const Icon(Icons.copy_outlined, size: 18),
-                  label: Text(
-                    person?.accounts.isNotEmpty == true
-                        ? 'IBAN’ı kopyala'
-                        : 'IBAN ekle',
-                  ),
-                ),
-                OutlinedButton(
-                  onPressed: busy ? null : manage,
-                  child: const Text('Kişi / IBAN'),
+                  label: const Text('IBAN’ı kopyala'),
                 ),
                 IconButton(
                   tooltip: 'Borcu sil',
