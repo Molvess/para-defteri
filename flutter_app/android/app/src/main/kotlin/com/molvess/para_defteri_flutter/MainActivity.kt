@@ -56,6 +56,7 @@ class MainActivity : FlutterActivity() {
                             exportText = call.argument<String>("text") ?: error("Eksik dosya içeriği")
                             pending = result
                             val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                                addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 addCategory(Intent.CATEGORY_OPENABLE)
                                 type = call.argument<String>("mime") ?: "application/json"
                                 putExtra(Intent.EXTRA_TITLE, call.argument<String>("name"))
@@ -66,6 +67,7 @@ class MainActivity : FlutterActivity() {
                         "open" -> {
                             pending = result
                             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 addCategory(Intent.CATEGORY_OPENABLE)
                                 type = "*/*"
                                 putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/json", "text/csv", "text/plain", "application/octet-stream", "application/vnd.ms-excel"))
@@ -75,6 +77,10 @@ class MainActivity : FlutterActivity() {
                         }
                         else -> result.notImplemented()
                     }
+                } catch (e: SecurityException) {
+                    pending = null
+                    exportText = null
+                    result.error("ACCESS_DENIED", "Seçiciye erişim reddedildi. Fotoğraf/dosya sağlayıcınızın ayarlarını kontrol edip tekrar deneyin.", null)
                 } catch (e: Exception) {
                     pending = null
                     exportText = null
@@ -86,6 +92,7 @@ class MainActivity : FlutterActivity() {
     @Suppress("DEPRECATION")
     private fun openPhotoPicker() {
         val photos = Intent(Intent.ACTION_GET_CONTENT).apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             type = "image/*"
             setPackage("com.google.android.apps.photos")
         }
@@ -97,11 +104,15 @@ class MainActivity : FlutterActivity() {
         }
         if (Build.VERSION.SDK_INT >= 33) {
             try {
-                startActivityForResult(Intent(MediaStore.ACTION_PICK_IMAGES).apply { type = "image/*" }, 403)
+                startActivityForResult(Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    type = "image/*"
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }, 403)
                 return
             } catch (_: ActivityNotFoundException) { /* Older gallery fallback below. */ }
         }
         startActivityForResult(Intent(Intent.ACTION_PICK).apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*")
         }, 403)
     }
@@ -142,6 +153,12 @@ class MainActivity : FlutterActivity() {
                     } ?: error("Dosya okunamadı")
                 }
                 runOnUiThread { pending = null; exportText = null; callback.success(value) }
+            } catch (e: SecurityException) {
+                runOnUiThread {
+                    pending = null
+                    exportText = null
+                    callback.error("ACCESS_DENIED", "Seçilen dosyaya erişim izni alınamadı veya süresi doldu. İşlemi yeniden başlatıp dosyayı tekrar seçin. Kayıtlarınız değiştirilmedi.", null)
+                }
             } catch (e: Exception) {
                 runOnUiThread { pending = null; exportText = null; callback.error("FILES", if (requestCode == 403) "Fotoğraf açılamadı. Başka bir JPEG/PNG fotoğraf seçin." else "Dosya okunamadı/yazılamadı.", null) }
             }

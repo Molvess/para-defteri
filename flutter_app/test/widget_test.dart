@@ -161,7 +161,9 @@ void main() {
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     String? result = photo;
     bool fail = false;
+    var pickerCalls = 0;
     messenger.setMockMethodCallHandler(platform, (call) async {
+      pickerCalls++;
       expect(call.method, 'pickPhoto');
       if (fail) {
         throw PlatformException(code: 'FILES', message: 'Fotoğraf açılamadı.');
@@ -176,8 +178,20 @@ void main() {
         ),
       ),
     );
+    await tester.tap(find.text('Fotoğraf ekle'));
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.text('Fotoğraf erişimi'), findsOneWidget);
+    expect(pickerCalls, 0);
+    await tester.tap(find.text('Vazgeç'));
+    await tester.pumpAndSettle();
+    expect(store.people.values.single.photo, isEmpty);
+    expect(pickerCalls, 0);
+    await tester.tap(find.text('Fotoğraf ekle'));
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.tap(find.text('Fotoğraf seç'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
     await tester.runAsync(() async {
-      await tester.tap(find.text('Fotoğraf ekle'));
       // Wait for the actual SQLite operation, outside the test fake clock.
       for (
         var i = 0;
@@ -192,15 +206,60 @@ void main() {
     expect(find.byType(PersonAvatar), findsOneWidget);
     result = null;
     await tester.tap(find.text('Fotoğrafı değiştir'));
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.tap(find.text('Fotoğraf seç'));
     await tester.pumpAndSettle();
     expect(store.people.values.single.photo, photo);
     fail = true;
     await tester.tap(find.text('Fotoğrafı değiştir'));
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.tap(find.text('Fotoğraf seç'));
     await tester.pumpAndSettle();
     expect(find.text('Fotoğraf açılamadı.'), findsOneWidget);
     expect(store.people.values.single.photo, photo);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'File access is never requested before consent; cancellation preserves data',
+    (tester) async {
+      final store = (await tester.runAsync(database))!;
+      addTearDown(store.db.close);
+      final calls = <String>[];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(platform, (call) async {
+        calls.add(call.method);
+        return null; // User closes the Android picker.
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(platform, null));
+      await tester.pumpWidget(shell(LedgerHome(store: store)));
+      for (final scenario in [
+        ('CSV / JSON içe aktar', 'Dosya seç', 'open'),
+        ('JSON yedek kaydet', 'Kaydetme yeri seç', 'save'),
+      ]) {
+        await tester.tap(find.byTooltip('Yedekleme ve aktarım'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(scenario.$1));
+        await tester.pump(const Duration(milliseconds: 350));
+        final before = calls.length;
+        await tester.tap(find.text('Vazgeç'));
+        await tester.pumpAndSettle();
+        expect(calls.length, before);
+        await tester.tap(find.byTooltip('Yedekleme ve aktarım'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(scenario.$1));
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.tap(find.text(scenario.$2));
+        await tester.pumpAndSettle();
+        expect(calls.last, scenario.$3);
+        expect(calls.length, before + 1);
+        expect(store.debts, isEmpty);
+        expect(find.text('İçe aktar'), findsNothing);
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'Long ledger builds only visible rows; filters keep direction and status separate',

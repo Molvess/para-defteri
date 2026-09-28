@@ -5,6 +5,7 @@ import 'app.dart';
 import 'ledger.dart';
 import 'store.dart';
 import 'person_avatar.dart';
+import 'access_consent.dart';
 
 class TurkishNameFormatter extends TextInputFormatter {
   @override
@@ -287,6 +288,9 @@ class _PeopleDialogState extends State<PeopleDialog> {
       error = null;
     });
     try {
+      if (!await confirmFileAccess(context, FileAccess.photo) || !mounted) {
+        return;
+      }
       final photo = await platform.invokeMethod<String>('pickPhoto');
       if (photo == null || !mounted) return;
       final current = widget.store.people[p.key] ?? p;

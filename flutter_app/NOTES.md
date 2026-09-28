@@ -51,6 +51,10 @@ Doğrulama: `dart analyze --fatal-infos`, Android release lint ve 11 Flutter tes
 
 ## Kapsam
 
+### 1.1.2 — seçili dosya erişimi
+
+Fotoğraf seçme, CSV/JSON okuma ve yedek yazma öncesinde uygulama içi bilgilendirme/onay eklenmiştir. Bu, genel Android depolama izni değildir: gerçek erişim sistem seçicisinde yalnızca seçilen dosya için verilir. URI erişim istekleri açıkça belirtilir, erişim reddi ayrı mesajla açıklanır. Onay iptalinde seçici açılmaz. Play Protect tarama mesajları ve mevcut debug imzasının sınırları [güvenlik notlarında](SECURITY.md) açıklanır. Mevcut kayıtlar, paket kimliği ve imza korunur.
+
 - Borç ekleme, aynı kimlikle düzenleme, iptal, silme/geri alma, ödeme durumu.
 - Yön + durum filtreleri; filtreye uygun genel toplamlar ve kişi altında yalnızca bekleyen alacak/verecek.
 - Türkçe ad baş harfi ve imleç koruması, takvim, anlaşılır doğrulama.

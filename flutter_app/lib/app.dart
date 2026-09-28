@@ -6,6 +6,7 @@ import 'ledger.dart';
 import 'store.dart';
 import 'dialogs.dart';
 import 'person_avatar.dart';
+import 'access_consent.dart';
 
 const green = Color(0xff84b59a),
     red = Color(0xffd89999),
@@ -198,6 +199,10 @@ class _LedgerHomeState extends State<LedgerHome> {
   }
 
   Future<void> export(bool json) => action(() async {
+    if (!await confirmFileAccess(context, FileAccess.exportBackup) ||
+        !mounted) {
+      return;
+    }
     final content = json
         ? backupJson(store.debts, store.people.values.toList())
         : exportCsv(store.debts, store.people);
@@ -212,6 +217,10 @@ class _LedgerHomeState extends State<LedgerHome> {
     }
   });
   Future<void> importFile() => action(() async {
+    if (!await confirmFileAccess(context, FileAccess.importBackup) ||
+        !mounted) {
+      return;
+    }
     final text = await platform.invokeMethod<String>('open');
     if (text == null || !mounted) return;
     final batch = text.replaceFirst('\ufeff', '').trimLeft().startsWith('{')
