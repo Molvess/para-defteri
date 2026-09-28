@@ -12,3 +12,7 @@ flutter build apk --release
 ```
 
 APK: `build/app/outputs/flutter-apk/app-release.apk`.
+
+## Lisans
+
+Bu sürüm de depo kökündeki [MIT Lisansı](../LICENSE) kapsamındadır. Kullanım, değişiklik ve paylaşım serbesttir; lisans ve telif bildirimleri korunmalıdır. Üçüncü taraf bağımlılıklar kendi lisanslarına tabidir.
