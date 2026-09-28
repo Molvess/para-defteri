@@ -161,12 +161,21 @@ void main() {
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     String? result = photo;
     bool fail = false;
+    var failureCode = 'FILES';
+    var settingsCalls = 0;
     var pickerCalls = 0;
     messenger.setMockMethodCallHandler(platform, (call) async {
+      if (call.method == 'openSettings') {
+        settingsCalls++;
+        return null;
+      }
       pickerCalls++;
       expect(call.method, 'pickPhoto');
       if (fail) {
-        throw PlatformException(code: 'FILES', message: 'Fotoğraf açılamadı.');
+        throw PlatformException(
+          code: failureCode,
+          message: 'Fotoğraf açılamadı.',
+        );
       }
       return result;
     });
@@ -216,6 +225,17 @@ void main() {
     await tester.tap(find.text('Fotoğraf seç'));
     await tester.pumpAndSettle();
     expect(find.text('Fotoğraf açılamadı.'), findsOneWidget);
+    expect(store.people.values.single.photo, photo);
+    failureCode = 'PERMISSION_BLOCKED';
+    await tester.tap(find.text('Fotoğrafı değiştir'));
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.tap(find.text('Fotoğraf seç'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.text('Erişim izni verilmedi'), findsOneWidget);
+    await tester.tap(find.text('Uygulama ayarları'));
+    await tester.pumpAndSettle();
+    expect(settingsCalls, 1);
     expect(store.people.values.single.photo, photo);
     expect(tester.takeException(), isNull);
   });

@@ -138,7 +138,13 @@ class _LedgerHomeState extends State<LedgerHome> {
       await work();
       if (mounted && success != null) notice(context, success);
     } catch (e) {
-      if (mounted) notice(context, errorText(e));
+      if (mounted) {
+        if (isPermissionError(e)) {
+          await showPermissionHelp(context, e as PlatformException);
+        } else {
+          notice(context, errorText(e));
+        }
+      }
     } finally {
       if (mounted) {
         setState(() {

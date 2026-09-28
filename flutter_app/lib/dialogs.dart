@@ -297,6 +297,9 @@ class _PeopleDialogState extends State<PeopleDialog> {
       await widget.store.savePerson(current.withPhoto(photo));
       if (mounted) notice(context, 'Kişi fotoğrafı kaydedildi.');
     } catch (e) {
+      if (mounted && isPermissionError(e)) {
+        await showPermissionHelp(context, e as PlatformException);
+      }
       if (mounted) {
         setState(() {
           error = errorText(e);

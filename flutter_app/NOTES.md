@@ -51,6 +51,10 @@ Doğrulama: `dart analyze --fatal-infos`, Android release lint ve 11 Flutter tes
 
 ## Kapsam
 
+### 1.1.3 — gerçek Android izin kapısı
+
+Fotoğraf seçicisinden önce Android sürümüne uygun runtime izinleri istenir; ret durumunda seçici açılmaz. Android 14+ kısmi fotoğraf erişimi kabul edilir. Android 7–9 dosya okuma/yazma izinleri de kontrol edilir; yeni Android sürümlerinde dosyalar SAF üzerinden seçilir. Önceden verilmiş izin yeniden sorulmaz; izinler Ayarlar'dan yönetilebilir. Önceki sürüm açıklamalarından farklı olarak tam fotoğraf izni artık manifestte vardır; ayrıntılar ve erişimin gerçek kapsamı [güvenlik notlarında](SECURITY.md) açıklanmıştır.
+
 ### 1.1.2 — seçili dosya erişimi
 
 Fotoğraf seçme, CSV/JSON okuma ve yedek yazma öncesinde uygulama içi bilgilendirme/onay eklenmiştir. Bu, genel Android depolama izni değildir: gerçek erişim sistem seçicisinde yalnızca seçilen dosya için verilir. URI erişim istekleri açıkça belirtilir, erişim reddi ayrı mesajla açıklanır. Onay iptalinde seçici açılmaz. Play Protect tarama mesajları ve mevcut debug imzasının sınırları [güvenlik notlarında](SECURITY.md) açıklanır. Mevcut kayıtlar, paket kimliği ve imza korunur.

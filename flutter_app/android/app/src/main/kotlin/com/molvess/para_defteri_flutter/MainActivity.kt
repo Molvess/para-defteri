@@ -3,6 +3,8 @@ package com.molvess.para_defteri_flutter
 import android.app.Activity
 import android.content.Intent
 import android.content.ActivityNotFoundException
+import android.content.pm.PackageManager
+import android.provider.Settings
 import android.provider.MediaStore
 import android.os.Build
 import android.graphics.Bitmap
@@ -20,6 +22,8 @@ import java.util.concurrent.Executors
 class MainActivity : FlutterActivity() {
     private var pending: MethodChannel.Result? = null
     private var exportText: String? = null
+    private var permissionAction: (() -> Unit)? = null
+    private var permissionOperation = 0
     private val io = Executors.newSingleThreadExecutor()
 
     override fun onResume() {
@@ -50,7 +54,7 @@ class MainActivity : FlutterActivity() {
                     when (call.method) {
                         "pickPhoto" -> {
                             pending = result
-                            openPhotoPicker()
+                            withPermission(403) { openPhotoPicker() }
                         }
                         "save" -> {
                             exportText = call.argument<String>("text") ?: error("Eksik dosya içeriği")
@@ -62,7 +66,7 @@ class MainActivity : FlutterActivity() {
                                 putExtra(Intent.EXTRA_TITLE, call.argument<String>("name"))
                             }
                             @Suppress("DEPRECATION")
-                            startActivityForResult(intent, 401)
+                            withPermission(401) { startActivityForResult(intent, 401) }
                         }
                         "open" -> {
                             pending = result
@@ -73,20 +77,64 @@ class MainActivity : FlutterActivity() {
                                 putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/json", "text/csv", "text/plain", "application/octet-stream", "application/vnd.ms-excel"))
                             }
                             @Suppress("DEPRECATION")
-                            startActivityForResult(intent, 402)
+                            withPermission(402) { startActivityForResult(intent, 402) }
+                        }
+                        "openSettings" -> {
+                            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
+                            result.success(null)
                         }
                         else -> result.notImplemented()
                     }
                 } catch (e: SecurityException) {
+                    permissionAction = null
                     pending = null
                     exportText = null
                     result.error("ACCESS_DENIED", "Seçiciye erişim reddedildi. Fotoğraf/dosya sağlayıcınızın ayarlarını kontrol edip tekrar deneyin.", null)
                 } catch (e: Exception) {
+                    permissionAction = null
                     pending = null
                     exportText = null
                     result.error("FILES", "Dosya seçici açılamadı.", null)
                 }
             }
+    }
+
+    private fun withPermission(operation: Int, action: () -> Unit) {
+        if (AccessPolicy.allowed(operation, Build.VERSION.SDK_INT) {
+                checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED
+            }) {
+            action()
+            return
+        }
+        permissionOperation = operation
+        permissionAction = action
+        requestPermissions(AccessPolicy.permissionsFor(operation, Build.VERSION.SDK_INT).toTypedArray(), 501)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != 501) return
+        val action = permissionAction ?: return
+        permissionAction = null
+        val callback = pending ?: return
+        val allowed = grantResults.isNotEmpty() && AccessPolicy.allowed(permissionOperation, Build.VERSION.SDK_INT) {
+            checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED
+        }
+        if (!allowed) {
+            val blocked = permissions.isNotEmpty() && permissions.all { !shouldShowRequestPermissionRationale(it) }
+            pending = null
+            exportText = null
+            callback.error(if (blocked) "PERMISSION_BLOCKED" else "PERMISSION_DENIED",
+                "Erişim izni verilmedi; fotoğraf/dosya seçicisi açılmadı. Kayıtlarınız değişmedi.", null)
+            return
+        }
+        try {
+            action()
+        } catch (_: Exception) {
+            pending = null
+            exportText = null
+            callback.error("FILES", "İzin alındı ancak fotoğraf/dosya seçicisi açılamadı. Tekrar deneyin.", null)
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -165,8 +213,8 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    // Only the selected image is read. A small private copy survives gallery changes
-    // and is backed up with the person; no broad media/storage permission is needed.
+    // Permission is checked before selection. Only the subsequently chosen image
+    // is processed; the app does not enumerate the broader permitted library.
     private fun readPhoto(uri: Uri): String {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
