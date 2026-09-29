@@ -56,6 +56,7 @@ class _PersonAvatarState extends State<PersonAvatar> {
         style: TextStyle(
           fontSize: widget.size * .38,
           fontWeight: FontWeight.w700,
+          color: Colors.white,
         ),
       ),
     );

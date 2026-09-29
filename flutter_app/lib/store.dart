@@ -9,6 +9,10 @@ class LedgerStore extends ChangeNotifier {
   final Database db;
   List<Debt> debts = const [];
   Map<String, Person> people = const {};
+  bool isDark = true;
+  String? reminderError;
+  Future<void> Function(List<Debt>)? syncAlarms;
+  Future<void> _syncQueue = Future.value();
   LedgerStore(this.db);
   static Future<LedgerStore> open({
     String? path,
@@ -20,7 +24,7 @@ class LedgerStore extends ChangeNotifier {
     final db = await f.openDatabase(
       location,
       options: OpenDatabaseOptions(
-        version: 1,
+        version: 2,
         onCreate: (db, version) async {
           await db.execute(
             'CREATE TABLE debts (id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL)',
@@ -28,6 +32,16 @@ class LedgerStore extends ChangeNotifier {
           await db.execute(
             'CREATE TABLE people (id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL)',
           );
+          await db.execute(
+            'CREATE TABLE settings (id TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)',
+          );
+        },
+        onUpgrade: (db, oldVersion, newVersion) async {
+          if (oldVersion < 2) {
+            await db.execute(
+              'CREATE TABLE settings (id TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)',
+            );
+          }
         },
       ),
     );
@@ -37,6 +51,12 @@ class LedgerStore extends ChangeNotifier {
   }
 
   Future<void> reload() async {
+    final settings = await db.query(
+      'settings',
+      where: 'id = ?',
+      whereArgs: ['theme'],
+    );
+    isDark = settings.isEmpty || settings.single['value'] != 'light';
     final ds = (await db.query('debts'))
         .map((r) => Debt.fromJson(jsonDecode(r['payload'] as String)))
         .toList();
@@ -49,6 +69,29 @@ class LedgerStore extends ChangeNotifier {
     debts = List.unmodifiable(ds);
     people = Map.unmodifiable({for (final p in ps) p.key: p});
     notifyListeners();
+    await syncReminders();
+  }
+
+  Future<void> toggleTheme() async {
+    await db.insert('settings', {
+      'id': 'theme',
+      'value': isDark ? 'light' : 'dark',
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    await reload();
+  }
+
+  Future<void> syncReminders() {
+    _syncQueue = _syncQueue.then((_) async {
+      if (syncAlarms == null) return;
+      try {
+        await syncAlarms!(debts);
+        reminderError = null;
+      } catch (_) {
+        reminderError = 'Kayıtlar saklandı ancak hatırlatıcılar Android ile eşitlenemedi. Tekrar deneyin.';
+      }
+      notifyListeners();
+    });
+    return _syncQueue;
   }
 
   Future<void> saveDebt(Debt debt, {bool editing = false}) async {

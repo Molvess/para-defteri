@@ -46,12 +46,45 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.molvess.ledger/files")
             .setMethodCallHandler { call, result ->
+                // Alarm sync is independent of a picker/permission result. Resume
+                // may occur while a photo is still being read on the IO queue.
+                if (call.method == "syncReminders") {
+                    try {
+                        val array = org.json.JSONArray(call.argument<String>("items") ?: "[]")
+                        io.execute {
+                            try {
+                                val state = ReminderScheduler.sync(this, array)
+                                runOnUiThread { result.success(state) }
+                            } catch (_: Exception) {
+                                runOnUiThread { result.error("REMINDER", "Hatırlatıcı zamanlaması tamamlanamadı.", null) }
+                            }
+                        }
+                    } catch (_: Exception) { result.error("REMINDER", "Hatırlatıcı verisi okunamadı.", null) }
+                    return@setMethodCallHandler
+                }
                 if (pending != null) {
                     result.error("BUSY", "Başka bir dosya işlemi sürüyor.", null)
                     return@setMethodCallHandler
                 }
                 try {
                     when (call.method) {
+                        "reminderStatus" -> result.success(ReminderScheduler.status(this))
+                        "requestNotifications" -> {
+                            ReminderScheduler.channel(this)
+                            if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                pending = result
+                                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 502)
+                            } else result.success(ReminderScheduler.status(this))
+                        }
+                        "openAlarmSettings" -> {
+                            if (Build.VERSION.SDK_INT >= 31) startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
+                            result.success(null)
+                        }
+                        "openNotificationSettings" -> {
+                            if (Build.VERSION.SDK_INT >= 26) startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+                            else startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
+                            result.success(null)
+                        }
                         "pickPhoto" -> {
                             pending = result
                             withPermission(403) { openPhotoPicker() }
@@ -113,6 +146,12 @@ class MainActivity : FlutterActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 502) {
+            val result = pending
+            pending = null
+            result?.success(ReminderScheduler.status(this))
+            return
+        }
         if (requestCode != 501) return
         val action = permissionAction ?: return
         permissionAction = null
@@ -139,17 +178,15 @@ class MainActivity : FlutterActivity() {
 
     @Suppress("DEPRECATION")
     private fun openPhotoPicker() {
-        val photos = Intent(Intent.ACTION_GET_CONTENT).apply {
+        val photos = Intent(Intent.ACTION_PICK).apply {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            type = "image/*"
-            setPackage("com.google.android.apps.photos")
+            setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*")
         }
-        if (photos.resolveActivity(packageManager) != null) {
-            try {
-                startActivityForResult(photos, 403)
-                return
-            } catch (_: ActivityNotFoundException) { /* Try the system photo picker. */ }
-        }
+        // Honour the default handler; Android offers app selection if unset.
+        try {
+            startActivityForResult(photos, 403)
+            return
+        } catch (_: ActivityNotFoundException) { /* System picker fallback. */ }
         if (Build.VERSION.SDK_INT >= 33) {
             try {
                 startActivityForResult(Intent(MediaStore.ACTION_PICK_IMAGES).apply {
@@ -159,9 +196,10 @@ class MainActivity : FlutterActivity() {
                 return
             } catch (_: ActivityNotFoundException) { /* Older gallery fallback below. */ }
         }
-        startActivityForResult(Intent(Intent.ACTION_PICK).apply {
+        startActivityForResult(Intent(Intent.ACTION_GET_CONTENT).apply {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*")
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "image/*"
         }, 403)
     }
 

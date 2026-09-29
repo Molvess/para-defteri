@@ -7,105 +7,7 @@ import 'store.dart';
 import 'dialogs.dart';
 import 'person_avatar.dart';
 import 'access_consent.dart';
-
-const green = Color(0xff84b59a),
-    red = Color(0xffd89999),
-    amber = Color(0xffd2b27d);
-const platform = MethodChannel('com.molvess.ledger/files');
-
-class LedgerApp extends StatelessWidget {
-  const LedgerApp({super.key});
-  @override
-  Widget build(BuildContext context) => MaterialApp(
-    debugShowCheckedModeBanner: false,
-    title: 'Para Defteri Flutter',
-    locale: const Locale('tr'),
-    supportedLocales: const [Locale('tr')],
-    localizationsDelegates: GlobalMaterialLocalizations.delegates,
-    theme: ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.dark,
-      colorScheme:
-          ColorScheme.fromSeed(
-            seedColor: const Color(0xff7894ae),
-            brightness: Brightness.dark,
-          ).copyWith(
-            surface: const Color(0xff171e26),
-            primary: const Color(0xffa4b8cd),
-            error: red,
-          ),
-      scaffoldBackgroundColor: const Color(0xff10161d),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xff10161d),
-        scrolledUnderElevation: 0,
-      ),
-      cardTheme: const CardThemeData(
-        elevation: 0,
-        color: Color(0xff1a232d),
-        margin: EdgeInsets.zero,
-      ),
-      inputDecorationTheme: const InputDecorationTheme(
-        border: OutlineInputBorder(),
-        filled: true,
-        fillColor: Color(0xff111a23),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          side: const BorderSide(color: Color(0xff506174)),
-          backgroundColor: const Color(0xff202c38),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        ),
-      ),
-    ),
-    home: const Startup(),
-  );
-}
-
-class Startup extends StatefulWidget {
-  const Startup({super.key});
-  @override
-  State<Startup> createState() => _StartupState();
-}
-
-class _StartupState extends State<Startup> {
-  late Future<LedgerStore> future = LedgerStore.open();
-  @override
-  Widget build(BuildContext context) => FutureBuilder<LedgerStore>(
-    future: future,
-    builder: (context, snapshot) {
-      if (snapshot.hasData) return LedgerHome(store: snapshot.data!);
-      return Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: snapshot.hasError
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, color: red),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Kayıtlar açılamadı. Verileriniz sıfırlanmadı.',
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: () => setState(() {
-                          future = LedgerStore.open();
-                        }),
-                        child: const Text('Yeniden dene'),
-                      ),
-                    ],
-                  )
-                : const CircularProgressIndicator(),
-          ),
-        ),
-      );
-    },
-  );
-}
+import 'reminders.dart';
 
 void notice(BuildContext context, String text) {
   ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -117,6 +19,179 @@ String errorText(Object e) => e is FormatException
     : e is PlatformException && e.message != null
     ? e.message!
     : 'İşlem tamamlanamadı. Kaydı/dosyayı kontrol edip tekrar deneyin.';
+Color tone(BuildContext context, Color color) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? color
+    : color == green
+    ? const Color(0xff236445)
+    : color == red
+    ? const Color(0xff9d3030)
+    : color == amber
+    ? const Color(0xff795a19)
+    : color;
+
+const green = Color(0xff84b59a),
+    red = Color(0xffd89999),
+    amber = Color(0xffd2b27d);
+const platform = MethodChannel('com.molvess.ledger/files');
+
+ThemeData darkTheme() => ThemeData(
+  useMaterial3: true,
+  brightness: Brightness.dark,
+  colorScheme:
+      ColorScheme.fromSeed(
+        seedColor: const Color(0xff7894ae),
+        brightness: Brightness.dark,
+      ).copyWith(
+        surface: const Color(0xff171e26),
+        primary: const Color(0xffa4b8cd),
+        surfaceContainerHighest: const Color(0xff222e3b),
+        error: red,
+      ),
+  scaffoldBackgroundColor: const Color(0xff10161d),
+  appBarTheme: const AppBarTheme(
+    backgroundColor: Color(0xff10161d),
+    scrolledUnderElevation: 0,
+  ),
+  cardTheme: const CardThemeData(
+    elevation: 0,
+    color: Color(0xff1a232d),
+    margin: EdgeInsets.zero,
+  ),
+  inputDecorationTheme: const InputDecorationTheme(
+    border: OutlineInputBorder(),
+    filled: true,
+    fillColor: Color(0xff111a23),
+  ),
+  outlinedButtonTheme: OutlinedButtonThemeData(
+    style: OutlinedButton.styleFrom(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      side: const BorderSide(color: Color(0xff506174)),
+      backgroundColor: const Color(0xff202c38),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    ),
+  ),
+);
+
+ThemeData lightTheme() => ThemeData(
+  useMaterial3: true,
+  brightness: Brightness.light,
+  colorScheme:
+      ColorScheme.fromSeed(
+        seedColor: const Color(0xff0d9488),
+        brightness: Brightness.light,
+      ).copyWith(
+        surface: const Color(0xffffffff),
+        primary: const Color(0xff0d9488),
+        surfaceContainerHighest: const Color(0xffedf2f7),
+        error: const Color(0xffe53e3e),
+      ),
+  scaffoldBackgroundColor: const Color(0xfff5f7fa),
+  appBarTheme: const AppBarTheme(
+    backgroundColor: Color(0xfff5f7fa),
+    scrolledUnderElevation: 0,
+    foregroundColor: Color(0xff1a202c),
+  ),
+  cardTheme: const CardThemeData(
+    elevation: 0.5,
+    color: Color(0xffffffff),
+    margin: EdgeInsets.zero,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(12)),
+      side: BorderSide(color: Color(0xffe2e8f0)),
+    ),
+  ),
+  inputDecorationTheme: const InputDecorationTheme(
+    border: OutlineInputBorder(),
+    filled: true,
+    fillColor: Color(0xfff8fafc),
+  ),
+  outlinedButtonTheme: OutlinedButtonThemeData(
+    style: OutlinedButton.styleFrom(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      side: const BorderSide(color: Color(0xffcbd5e1)),
+      backgroundColor: const Color(0xfff8fafc),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    ),
+  ),
+);
+
+class LedgerApp extends StatefulWidget {
+  final LedgerStore? store;
+  const LedgerApp({super.key, this.store});
+  @override
+  State<LedgerApp> createState() => _LedgerAppState();
+}
+
+class _LedgerAppState extends State<LedgerApp> {
+  late Future<LedgerStore> future = widget.store != null
+      ? Future.value(widget.store!)
+      : LedgerStore.open().then((store) async {
+          store.syncAlarms = syncAndroidReminders;
+          await store.syncReminders();
+          return store;
+        });
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<LedgerStore>(
+    future: future,
+    builder: (context, snapshot) {
+      final store = snapshot.data ?? widget.store;
+      if (store == null) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: Scaffold(
+            body: Center(
+              child: snapshot.hasError
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline, color: red),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Kayıtlar açılamadı. Verileriniz sıfırlanmadı.',
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton(
+                          onPressed: () => setState(() {
+                            future = LedgerStore.open().then((store) async {
+                              store.syncAlarms = syncAndroidReminders;
+                              await store.syncReminders();
+                              return store;
+                            });
+                          }),
+                          child: const Text('Tekrar dene'),
+                        ),
+                      ],
+                    )
+                  : const CircularProgressIndicator(),
+            ),
+          ),
+        );
+      }
+      return ListenableBuilder(
+        listenable: store,
+        builder: (context, _) => MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Para Defteri',
+          locale: const Locale('tr'),
+          supportedLocales: const [Locale('tr')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          theme: lightTheme(),
+          darkTheme: darkTheme(),
+          themeMode: store.isDark ? ThemeMode.dark : ThemeMode.light,
+          home: LedgerHome(store: store),
+        ),
+      );
+    },
+  );
+}
+
+class Startup extends StatelessWidget {
+  const Startup({super.key});
+  @override
+  Widget build(BuildContext context) => const LedgerApp();
+}
 
 class LedgerHome extends StatefulWidget {
   final LedgerStore store;
@@ -125,10 +200,27 @@ class LedgerHome extends StatefulWidget {
   State<LedgerHome> createState() => _LedgerHomeState();
 }
 
-class _LedgerHomeState extends State<LedgerHome> {
+class _LedgerHomeState extends State<LedgerHome> with WidgetsBindingObserver {
   int direction = 0, payment = 0;
   bool busy = false, summaries = true;
   LedgerStore get store => widget.store;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !busy) store.syncReminders();
+  }
+
   Future<void> action(Future<void> Function() work, [String? success]) async {
     if (busy) return;
     setState(() {
@@ -286,7 +378,7 @@ class _LedgerHomeState extends State<LedgerHome> {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      backgroundColor: const Color(0xff171e26),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -303,12 +395,21 @@ class _LedgerHomeState extends State<LedgerHome> {
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'Kayıtlarını taşı, yedekle ve güvende tut.',
-                  style: TextStyle(color: Colors.white60),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface
+                        .withValues(alpha: 0.6),
+                  ),
                 ),
                 const SizedBox(height: 20),
-                for (final item in const [
+                for (final item in [
+                  (
+                    'reminders',
+                    Icons.notifications_active_outlined,
+                    'Hatırlatıcılar',
+                    'Tüm planları görüntüle ve düzenle',
+                  ),
                   (
                     'keep',
                     Icons.note_alt_outlined,
@@ -337,10 +438,16 @@ class _LedgerHomeState extends State<LedgerHome> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Material(
-                      color: const Color(0xff202c38),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.5),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
-                        side: const BorderSide(color: Color(0xff354555)),
+                        side: BorderSide(
+                          color: Theme.of(context).dividerColor
+                              .withValues(alpha: 0.2),
+                        ),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: ListTile(
@@ -355,9 +462,10 @@ class _LedgerHomeState extends State<LedgerHome> {
                         ),
                         subtitle: Text(
                           item.$4,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Colors.white60,
+                            color: Theme.of(context).colorScheme.onSurface
+                                .withValues(alpha: 0.6),
                           ),
                         ),
                         trailing: const Icon(Icons.chevron_right, size: 20),
@@ -373,6 +481,11 @@ class _LedgerHomeState extends State<LedgerHome> {
     );
     if (!mounted) return;
     switch (choice) {
+      case 'reminders':
+        await showDialog<void>(
+          context: context,
+          builder: (_) => ReminderCenter(store: store),
+        );
       case 'keep':
         await keepImport();
       case 'open':
@@ -426,17 +539,69 @@ class _LedgerHomeState extends State<LedgerHome> {
         ..sort((a, b) => a.key.compareTo(b.key));
       return Scaffold(
         appBar: AppBar(
-          title: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Para Defteri'),
-              Text(
-                'Flutter · Yerel kayıt',
-                style: TextStyle(fontSize: 12, color: Colors.white54),
+              Container(
+                width: 32,
+                height: 32,
+                margin: const EdgeInsets.only(right: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xff0d9488),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Center(
+                  child: Text(
+                    '₺',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Para Defteri',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    Text(
+                      'v1.1.4',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).colorScheme.onSurface
+                            .withValues(alpha: 0.55),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
           actions: [
+            IconButton(
+              tooltip: widget.store.isDark
+                  ? 'Açık temaya geç'
+                  : 'Koyu temaya geç',
+              onPressed: busy ? null : () => action(widget.store.toggleTheme),
+              icon: Icon(
+                widget.store.isDark
+                    ? Icons.light_mode_outlined
+                    : Icons.dark_mode_outlined,
+              ),
+            ),
             IconButton(
               tooltip: 'Kişiler ve IBAN',
               onPressed: busy ? null : () => people(),
@@ -457,6 +622,18 @@ class _LedgerHomeState extends State<LedgerHome> {
               child: Column(
                 children: [
                   if (busy) const LinearProgressIndicator(minHeight: 2),
+                  if (store.reminderError != null)
+                    MaterialBanner(
+                      content: Text(store.reminderError!),
+                      actions: [
+                        TextButton(
+                          onPressed: busy
+                              ? null
+                              : () => action(store.syncReminders),
+                          child: const Text('Tekrar dene'),
+                        ),
+                      ],
+                    ),
                   Expanded(
                     child: CustomScrollView(
                       key: const PageStorageKey('ledger-scroll'),
@@ -509,11 +686,14 @@ class _LedgerHomeState extends State<LedgerHome> {
                                           ],
                                         ),
                                         const SizedBox(height: 12),
-                                        const Text(
+                                        Text(
                                           'Toplamlar seçili yön ve ödeme filtresine aittir.',
                                           style: TextStyle(
                                             fontSize: 11,
-                                            color: Colors.white60,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.6),
                                           ),
                                         ),
                                       ],
@@ -635,7 +815,10 @@ class _LedgerHomeState extends State<LedgerHome> {
                             padding: const EdgeInsets.all(16),
                             child: Text(
                               '${visible.length} borç · En son eklenen en üstte',
-                              style: const TextStyle(color: Colors.white60),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface
+                                    .withValues(alpha: 0.6),
+                              ),
                             ),
                           ),
                         ),
@@ -677,6 +860,11 @@ class _LedgerHomeState extends State<LedgerHome> {
                                 ),
                                 manage: () => people(d.key),
                                 copy: () => copyAccounts(p),
+                                remind: () => showDialog<void>(
+                                  context: context,
+                                  builder: (_) =>
+                                      ReminderEditor(debt: d, store: store),
+                                ),
                               ),
                             );
                           },
@@ -719,7 +907,7 @@ class Metric extends StatelessWidget {
       Text(
         label,
         style: TextStyle(
-          color: color,
+          color: tone(context, color),
           fontStyle: FontStyle.italic,
           fontWeight: FontWeight.bold,
           fontSize: 12,
@@ -728,7 +916,7 @@ class Metric extends StatelessWidget {
       Text(
         money(cents),
         style: TextStyle(
-          color: color,
+          color: tone(context, color),
           fontWeight: FontWeight.w800,
           fontSize: 18,
         ),
@@ -767,6 +955,7 @@ class DebtCard extends StatelessWidget {
   final Person? person;
   final bool busy;
   final VoidCallback edit, remove, toggle, manage, copy;
+  final VoidCallback? remind;
   const DebtCard({
     super.key,
     required this.debt,
@@ -777,10 +966,11 @@ class DebtCard extends StatelessWidget {
     required this.toggle,
     required this.manage,
     required this.copy,
+    this.remind,
   });
   @override
   Widget build(BuildContext context) {
-    final color = debt.income ? green : red;
+    final color = tone(context, debt.income ? green : red);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -840,11 +1030,45 @@ class DebtCard extends StatelessWidget {
                 Text(
                   debt.paid ? 'ÖDENDİ' : 'ÖDENECEK',
                   style: TextStyle(
-                    color: debt.paid ? Colors.white60 : amber,
+                    color: debt.paid
+                        ? (Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white60
+                              : Colors.black54)
+                        : amber,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(debt.date, style: const TextStyle(color: Colors.white60)),
+                Text(
+                  debt.date,
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white60
+                        : Colors.black54,
+                  ),
+                ),
+                if (debt.reminder != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xff0d9488).withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: const Color(0xff0d9488),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Text(
+                      debt.reminder!.summary,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xff0d9488),
+                      ),
+                    ),
+                  ),
               ],
             ),
             if (person?.accounts.isNotEmpty == true)
@@ -852,7 +1076,10 @@ class DebtCard extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 10),
                 child: Text(
                   '${maskedIban(person!.accounts.first.iban)}${person!.accounts.length > 1 ? ' · ${person!.accounts.length} IBAN' : ''}',
-                  style: const TextStyle(color: Colors.white60),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface
+                        .withValues(alpha: 0.6),
+                  ),
                 ),
               ),
             const Divider(height: 24),
@@ -881,6 +1108,14 @@ class DebtCard extends StatelessWidget {
                       : (person?.accounts.isNotEmpty == true ? copy : null),
                   icon: const Icon(Icons.copy_outlined, size: 18),
                   label: const Text('IBAN’ı kopyala'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: busy ? null : remind,
+                  icon: const Icon(
+                    Icons.notifications_active_outlined,
+                    size: 18,
+                  ),
+                  label: const Text('Hatırlatıcı'),
                 ),
                 IconButton(
                   tooltip: 'Borcu sil',

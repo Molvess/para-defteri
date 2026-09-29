@@ -12,6 +12,10 @@ String capitalizeName(String name) => name.replaceFirstMapped(
 );
 String normalizeIban(String text) =>
     text.replaceAll(RegExp(r'\s'), '').toUpperCase();
+String formattedIban(String text) =>
+    normalizeIban(text)
+        .replaceAllMapped(RegExp(r'.{1,4}'), (m) => '${m[0]} ')
+        .trim();
 bool validIban(String text) {
   final value = normalizeIban(text);
   if (!RegExp(r'^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$').hasMatch(value)) {
@@ -83,6 +87,7 @@ class Debt {
   final String id, name, description, date;
   final int cents, createdAt;
   final bool income, paid;
+  final Reminder? reminder;
   const Debt({
     required this.id,
     required this.name,
@@ -92,6 +97,7 @@ class Debt {
     required this.income,
     required this.paid,
     required this.createdAt,
+    this.reminder,
   });
   String get key => personKey(name);
   Debt toggle() => Debt(
@@ -103,6 +109,18 @@ class Debt {
     income: income,
     paid: !paid,
     createdAt: createdAt,
+    reminder: reminder,
+  );
+  Debt withReminder(Reminder? value) => Debt(
+    id: id,
+    name: name,
+    cents: cents,
+    description: description,
+    date: date,
+    income: income,
+    paid: paid,
+    createdAt: createdAt,
+    reminder: value,
   );
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -113,6 +131,7 @@ class Debt {
     'income': income,
     'paid': paid,
     'createdAt': createdAt,
+    if (reminder != null) 'reminder': reminder!.toJson(),
   };
   factory Debt.fromJson(Map<String, dynamic> j) {
     final d = Debt(
@@ -124,6 +143,9 @@ class Debt {
       income: j['income'] as bool,
       paid: j['paid'] as bool? ?? false,
       createdAt: j['createdAt'] as int,
+      reminder: j['reminder'] == null
+          ? null
+          : Reminder.fromJson(Map<String, dynamic>.from(j['reminder'])),
     );
     parseDate(d.date);
     if (d.id.isEmpty ||
@@ -133,6 +155,62 @@ class Debt {
       throw const FormatException('Geçersiz borç kaydı.');
     }
     return d;
+  }
+}
+
+class Reminder {
+  final bool enabled;
+  final String startDate, repeat;
+  final String? endDate;
+  final int hour, minute, interval;
+  const Reminder({
+    required this.startDate,
+    required this.hour,
+    required this.minute,
+    this.repeat = 'once',
+    this.interval = 1,
+    this.endDate,
+    this.enabled = true,
+  });
+  String get time =>
+      '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+  String get summary =>
+      '${enabled ? '' : 'Duraklatıldı · '}$startDate $time · ${repeat == 'once' ? 'Tek sefer' : 'Her $interval ${const {'daily': 'gün', 'weekly': 'hafta', 'monthly': 'ay'}[repeat]}'}${endDate == null ? '' : ' · Bitiş $endDate'}';
+  Map<String, dynamic> toJson() => {
+    'enabled': enabled,
+    'startDate': startDate,
+    'hour': hour,
+    'minute': minute,
+    'repeat': repeat,
+    'interval': interval,
+    'endDate': endDate,
+  };
+  factory Reminder.fromJson(Map<String, dynamic> j) {
+    final r = Reminder(
+      startDate: j['startDate'] as String,
+      hour: j['hour'] as int,
+      minute: j['minute'] as int,
+      repeat: j['repeat'] as String? ?? 'once',
+      interval: j['interval'] as int? ?? 1,
+      endDate: j['endDate'] as String?,
+      enabled: j['enabled'] as bool? ?? true,
+    );
+    final start = parseDate(r.startDate);
+    if (start.year < 1900 ||
+        start.year > 2200 ||
+        r.hour < 0 ||
+        r.hour > 23 ||
+        r.minute < 0 ||
+        r.minute > 59 ||
+        !['once', 'daily', 'weekly', 'monthly'].contains(r.repeat) ||
+        r.interval < 1 ||
+        r.interval > 365 ||
+        (r.endDate != null && parseDate(r.endDate!).isBefore(start))) {
+      throw const FormatException(
+        'Hatırlatıcı tarih/saat veya tekrar aralığı geçersiz.',
+      );
+    }
+    return r;
   }
 }
 

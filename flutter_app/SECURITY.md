@@ -16,7 +16,13 @@ Doğrulama komutları: Flutter klasöründe `dart analyze --fatal-infos`, `flutt
 
 Kaynak: [Android izin minimizasyonu](https://developer.android.com/privacy-and-security/minimize-permission-requests), [dosya seçicisi](https://developer.android.com/training/data-storage/shared/documents-files).
 
-## Play Protect
+## Yerel hatırlatıcı izinleri (1.1.4)
+
+`POST_NOTIFICATIONS` Android 13+ için hatırlatıcı kaydederken istenir. Ret halinde yeni plan kaydedilmez. `SCHEDULE_EXACT_ALARM` kullanıcıya ayrı Ayarlar eylemiyle sunulur; otomatik olarak verilmiş sayılmaz. Bu özel izin yoksa AlarmManager yaklaşık zamanlamaya geçer; gecikme bilgisi arayüzde görünür. `RECEIVE_BOOT_COMPLETED` kayıtlı planları yeniden başlatmadan sonra kurmak içindir. Bildirimlerde kişi/tutar/açıklama olabilir, IBAN yer almaz; kilit ekranı görünürlüğü PRIVATE'dır. Kayıtlar bir sunucuya gönderilmez. Üretici pil kısıtları veya zorla durdurma bildirimleri engelleyebilir.
+
+Kaynak: [Android alarm zamanlama](https://developer.android.com/develop/background-work/services/alarms).
+
+## Play Protect mesajları
 
 “Google'a güvenlik kontrolü için gönder” mesajı, bilinmeyen APK için tarama isteğidir; tek başına zararlı yazılım tespiti değildir. Güvendiğiniz resmi kaynaktan indirdiğiniz APK için cihazdaki taramayı çalıştırabilirsiniz. Bu mesajı uygulama içinden kaldırmak veya bir manifest izniyle önlemek mümkün değildir. Yeni APK'larda tekrar tarama istenebilir. Koruma kapatılmamalıdır.
 

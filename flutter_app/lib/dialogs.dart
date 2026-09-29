@@ -6,6 +6,7 @@ import 'ledger.dart';
 import 'store.dart';
 import 'person_avatar.dart';
 import 'access_consent.dart';
+import 'person_picker.dart';
 
 class TurkishNameFormatter extends TextInputFormatter {
   @override
@@ -76,6 +77,7 @@ class _DebtEditorState extends State<DebtEditor> {
         paid: paid,
         createdAt:
             widget.debt?.createdAt ?? DateTime.now().millisecondsSinceEpoch,
+        reminder: widget.debt?.reminder,
       );
       await widget.store.saveDebt(d, editing: widget.debt != null);
       if (mounted) {
@@ -121,12 +123,14 @@ class _DebtEditorState extends State<DebtEditor> {
                           size: 64,
                         ),
                         const SizedBox(width: 14),
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'Kişi fotoğrafı\nKayıtlı kişinin adını yazınca görünür.',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.white60,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -139,7 +143,31 @@ class _DebtEditorState extends State<DebtEditor> {
                   enabled: !busy,
                   inputFormatters: [TurkishNameFormatter()],
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(labelText: 'Kim?'),
+                  decoration: InputDecoration(
+                    labelText: 'Kim?',
+                    suffixIcon: IconButton(
+                      tooltip: 'Kayıtlı kişi seç',
+                      icon: const Icon(Icons.person_search_outlined),
+                      onPressed: busy
+                          ? null
+                          : () async {
+                              final selected = await showDialog<Person>(
+                                context: context,
+                                builder: (_) => PersonPicker(
+                                  people: widget.store.people.values.toList(),
+                                ),
+                              );
+                              if (selected != null && mounted) {
+                                name.value = TextEditingValue(
+                                  text: selected.name,
+                                  selection: TextSelection.collapsed(
+                                    offset: selected.name.length,
+                                  ),
+                                );
+                              }
+                            },
+                    ),
+                  ),
                   validator: (v) => v == null || v.trim().isEmpty
                       ? 'Kişi adı zorunlu.'
                       : null,
@@ -512,10 +540,33 @@ class _PeopleDialogState extends State<PeopleDialog> {
                                           ),
                                         ),
                                         const SizedBox(height: 8),
-                                        SelectableText(
-                                          revealed.contains(account.iban)
-                                              ? account.iban
-                                              : maskedIban(account.iban),
+                                        Container(
+                                          key: ValueKey(
+                                            'iban-box-${account.iban}',
+                                          ),
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .surfaceContainerHighest,
+                                            border: Border.all(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .outlineVariant,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          child: SelectableText(
+                                            revealed.contains(account.iban)
+                                                ? formattedIban(account.iban)
+                                                : maskedIban(account.iban),
+                                            style: const TextStyle(
+                                              fontFamily: 'monospace',
+                                            ),
+                                          ),
                                         ),
                                         Wrap(
                                           children: [
@@ -827,9 +878,12 @@ class _KeepDialogState extends State<KeepDialog> {
               'Her satır: Ad - Tutar TL - Açıklama Tarih +/-\n+ Alacak, − Verecek. Durum yoksa Ödenecek.',
             ),
             const SizedBox(height: 12),
-            const SelectableText(
+            SelectableText(
               'Mustafa - 200 TL - yemeks 05/07/2026 +\nRifat - 1150 TL - Telefon 09/03/2026 -\nYasin - 40 TL - içecek 20/07/2026 +',
-              style: TextStyle(fontSize: 12, color: Colors.white60),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 16),
             TextField(

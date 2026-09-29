@@ -51,6 +51,22 @@ Doğrulama: `dart analyze --fatal-infos`, Android release lint ve 11 Flutter tes
 
 ## Kapsam
 
+### 1.1.4 — tema, kişiler ve hatırlatıcılar
+
+- Fotoğraf seçiminde Google Fotoğraflar'a zorunlu yönlendirme kaldırıldı. Android'in varsayılan fotoğraf seçme uygulaması kullanılır; varsayılan yoksa Android uygun uygulamaları sunar. Fotoğraf görüntüleyicisinin seçim intent'ini desteklemesi gerekir. Uygun galeri yoksa sistem seçicisine dönülür. Gerçek fotoğraf izinleri korunur.
+- IBAN gizli ve açıkken aynı kenarlıklı kutudadır; açık değer dört karakterlik gruplarla gösterilir. Kopyalama tam normalize IBAN'ı verir.
+- Kim? alanının kişi arama butonu mevcut kişileri arayıp seçtirir; yeni ad yazmak hâlâ mümkündür.
+- Açık/koyu tema tercihi SQLite ayarlar tablosunda saklanır. Şema v1→v2 geçişi yalnızca ayarlar tablosu ekler; borç, fotoğraf ve IBAN kayıtları korunur. Başlık kalın, alt satır sürüm numarasıdır.
+- Uygulama simgesi sade beyaz **₺** işareti ve turkuaz zemin olarak vektör tabanlıdır; Android 8+ adaptif, Android 7 için katmanlı ikon kullanılır. Mevcut çalışma alanındaki bozuk WebP ikon taslakları değiştirilmedi; yeni manifest onlara bağlı değildir.
+- Her borç kartındaki **Hatırlatıcı** eylemi tarih, saat, tek sefer/günlük/haftalık/aylık tekrar, 1–365 tekrar aralığı ve isteğe bağlı bitiş günü seçtirir. Örneğin başlangıcı ayın 15'i seçip aylık/1 yapabilirsiniz. Ayda ilgili gün yoksa son gün kullanılır; sonraki ay asıl güne geri dönülür.
+- Üç nokta menüsündeki **Hatırlatıcılar** merkezi bütün aktif ve duraklatılmış planları kişi, tutar, yön ve zaman bilgisiyle tek listede gösterir. Buradan mevcut plan açılıp düzenlenebilir veya kaldırılabilir. Tema seçeneği üç nokta menüsünden kaldırılmıştır; açık/koyu geçişi başlıktaki güneş/ay düğmesindedir.
+- Android 13+ bildirim izni kullanıcı kaydederken istenir. Kanal/bildirim kapalıysa uyarı gösterilir. Android 12+ kesin zamanlama özel izni ayrı butondan açılır; verilmezse alarm yaklaşık çalışır ve gecikebileceği açıkça belirtilir. Ayarlardan dönünce **Durumu yenile** ile kontrol edilebilir.
+- Android AlarmManager ve manifest alıcısı uygulama ekranı kapalıyken çalışır. Yeniden başlatma, paket güncelleme, saat/saat dilimi değişikliği sonrası alarmlar yeniden kurulur. Saatler telefonun yerel saatidir. Kaçırılmış eski bildirimler topluca tekrar oynatılmaz. Telefonun zorla durdurma/pil politikaları teslimatı engelleyebilir; kesin teslimat garantisi yoktur.
+- Hatırlatıcı borç JSON'una eklenir, eski kayıtlarda yok kabul edilir. JSON yedeği tekrar planını taşır; CSV fotoğraf ve hatırlatıcı planını içermez. İçe aktarma/yeniden açılışta planlar eşitlenir. Borç silmek alarmı iptal eder; geri alma tekrar kurar. **Ödendi** durumu tekrarları durdurmaz: hatırlatıcıyı ayrıca duraklatın/kaldırın.
+- Alarm tanımları Android'in uygulamaya özel kayıt alanına da yansıtılır; eşitleme hatası varsa borç kaydı korunur ve ana ekranda tekrar deneme uyarısı çıkar. Kilit ekranında bildirim içeriği özel olarak işaretlenir; görünürlük kullanıcının Android ayarlarına bağlıdır.
+
+Doğrulama: 20 Flutter testi; 5 izin + 6 tarih/tekrar Kotlin testi; statik analiz, release derlemesi ve Android lint. v1 verisinin korunması, tema kalıcılığı, hatırlatıcı merkezi, IBAN kutusu, kişi seçimi, bildirim reddi, alarm eşitleme, ay sonu/artık yıl ve yaz saati geçişleri test edilir. Gerçek cihazda bildirim/yeniden başlatma/galeri akışı bu ortamda denenmemiştir.
+
 ### 1.1.3 — gerçek Android izin kapısı
 
 Fotoğraf seçicisinden önce Android sürümüne uygun runtime izinleri istenir; ret durumunda seçici açılmaz. Android 14+ kısmi fotoğraf erişimi kabul edilir. Android 7–9 dosya okuma/yazma izinleri de kontrol edilir; yeni Android sürümlerinde dosyalar SAF üzerinden seçilir. Önceden verilmiş izin yeniden sorulmaz; izinler Ayarlar'dan yönetilebilir. Önceki sürüm açıklamalarından farklı olarak tam fotoğraf izni artık manifestte vardır; ayrıntılar ve erişimin gerçek kapsamı [güvenlik notlarında](SECURITY.md) açıklanmıştır.
